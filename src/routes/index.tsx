@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import logoAsset from "@/assets/logo-grm.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, ShieldCheck, UserCheck, Clock, CheckCircle2, Phone } from "lucide-react";
+import { Shield, ShieldCheck, UserCheck, Clock, CheckCircle2, Phone, Video } from "lucide-react";
+import { InteractiveVideo } from "@/components/video/InteractiveVideo";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -121,21 +123,17 @@ function Index() {
               ))}
             </ul>
           </div>
-          <div className="relative aspect-4/5 bg-white/5 rounded-3xl p-8 flex flex-col items-center justify-center text-center border border-white/10 shadow-2xl overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Shield className="w-64 h-64 -mr-20 -mt-20" />
+          <div className="flex flex-col items-center">
+            <InteractiveVideo />
+            <div className="mt-8 text-center max-w-sm">
+              <h3 className="text-2xl font-bold mb-4">Vídeo Interativo GRM</h3>
+              <p className="text-lg font-light opacity-70">
+                Veja a importância da segurança privada em ação com nossa demonstração interativa.
+              </p>
             </div>
-            <img 
-              src={logoAsset.url} 
-              alt="Logo" 
-              className="w-32 mb-6 opacity-80" 
-            />
-            <h3 className="text-2xl font-bold mb-4">GRM GUARDIÃO</h3>
-            <p className="text-lg font-light max-w-xs opacity-70">
-              Sua tranquilidade é o nosso compromisso diário.
-            </p>
           </div>
         </div>
+        <Toaster position="top-center" />
       </section>
 
       {/* Footer / CTA */}
