@@ -1,12 +1,28 @@
 1
-00:00:00,000 --> 00:00:07,000
-A GRM Guardião oferece a melhor segurança privada e patrimonial.
+00:00:00,000 --> 00:00:04,000
+A GRM Guardião é a sua parceira definitiva
 
 2
-00:00:07,000 --> 00:00:15,000
-Com monitoramento profissional 24h e câmeras de alta tecnologia.
+00:00:04,000 --> 00:00:08,000
+em segurança privada e patrimonial.
 
 3
-00:00:15,000 --> 00:00:23,000
-Garantimos a sua tranquilidade e a proteção do seu patrimônio.
+00:00:08,000 --> 00:00:12,000
+Protegemos sua residência e seu comércio
+
+4
+00:00:12,000 --> 00:00:16,000
+com tecnologia de ponta e equipe treinada.
+
+5
+00:00:16,000 --> 00:00:20,000
+Nossas câmeras e rondas garantem sua paz
+
+6
+00:00:20,000 --> 00:00:24,000
+enquanto cuidamos do que é seu.
+
+7
+00:00:24,000 --> 00:00:30,000
+GRM Guardião: sua segurança é nossa missão.
 
