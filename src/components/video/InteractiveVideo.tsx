@@ -18,8 +18,10 @@ export function InteractiveVideo() {
     setIsLoading(true);
     try {
       const result = await generate({ 
-        text: "Segurança privada, câmeras e ronda para casa e comércio.",
-        duration: 30 
+        data: {
+          text: "Segurança privada, câmeras e ronda para casa e comércio.",
+          duration: 30 
+        }
       });
       setVideoData(result);
       toast.success("Vídeo gerado com sucesso!");
