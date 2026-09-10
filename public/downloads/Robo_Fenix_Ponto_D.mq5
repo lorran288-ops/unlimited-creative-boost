@@ -36,7 +36,7 @@
 //|  - Precisao do lote calculada pelo SYMBOL_VOLUME_STEP             |
 //+------------------------------------------------------------------+
 #property copyright "Robo Gartley Harmonico"
-#property version   "2.70"
+#property version   "2.90"
 
 #include <Trade\Trade.mqh>
 
@@ -60,8 +60,8 @@ input double InpCorpoMinimo             = 0.30;        // Forca minima do corpo 
 input double InpDistanciaPRZ            = 2.0;         // Distancia maxima do preco ao ponto D (x ATR)
 
 input group "=== GESTAO DIARIA (percentual do saldo) ==="
-input double InpStopDiarioPct           = 0.2;         // Stop maximo diario (%) - conta toda
-input double InpAlvoDiarioPct           = 0.4;         // Alvo maximo diario (%) - o dobro do stop
+input double InpStopDiarioPct           = 1.0;         // Stop maximo diario (%) - conta toda
+input double InpAlvoDiarioPct           = 2.0;         // Alvo maximo diario (%) - o dobro do stop
 input int    InpMaxEntradasDia          = 2;           // Maximo de entradas por dia (1 a 2)
 input int    InpMaxPosicoesAbertas      = 1;           // Maximo de posicoes abertas no MESMO ativo
 input bool   InpGestaoGlobal            = true;        // Gestao somada da conta (3 ativos juntos)
