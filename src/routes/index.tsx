@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import logoAsset from "@/assets/logo-grm.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, ShieldCheck, UserCheck, Clock, CheckCircle2, Phone, Video } from "lucide-react";
+import { Shield, ShieldCheck, UserCheck, Clock, CheckCircle2, Phone, Video, Download } from "lucide-react";
 import { InteractiveVideo } from "@/components/video/InteractiveVideo";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -76,6 +76,16 @@ function Index() {
             </Button>
             <Button size="lg" variant="outline" className="text-lg px-8 py-6 rounded-full border-2">
               <Phone className="mr-2 h-5 w-5" /> Falar com Especialista
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="secondary"
+              className="text-lg px-8 py-6 rounded-full shadow-lg"
+            >
+              <a href="/downloads/Robo_Fenix_Ponto_D.mq5" download>
+                <Download className="mr-2 h-5 w-5" /> Robô Fênix Ponto D
+              </a>
             </Button>
           </div>
         </div>
