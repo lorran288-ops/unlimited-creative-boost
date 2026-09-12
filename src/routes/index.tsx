@@ -88,6 +88,16 @@ function Index() {
                 <Download className="mr-2 h-5 w-5" /> Robô Fênix Ponto D
               </a>
             </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="text-lg px-8 py-6 rounded-full border-2"
+            >
+              <a href="/downloads/Novo_Robo.mq5" download>
+                <Download className="mr-2 h-5 w-5" /> Novo Robô
+              </a>
+            </Button>
           </div>
         </div>
       </header>
