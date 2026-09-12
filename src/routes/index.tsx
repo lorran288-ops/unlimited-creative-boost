@@ -44,8 +44,8 @@ function Index() {
               <button
                 onClick={() => {
                   const link = document.createElement("a");
-                  link.href = "/download/ferramenta.zip";
-                  link.download = "ferramenta.zip";
+                  link.href = "/downloads/Robo_Fenix_Ponto_D.mq5";
+                  link.download = "Robo_Fenix_Ponto_D.mq5";
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);
