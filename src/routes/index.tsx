@@ -41,9 +41,19 @@ function Index() {
               </div>
             </div>
             <div className="mt-12 flex justify-center">
-              <a href="/download/ferramenta.zip" download className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 to-amber-600 text-[#030712] px-10 py-7 font-extrabold text-xl shadow-2xl shadow-amber-500/20 hover:shadow-amber-400/40 transition-all hover:-translate-y-1 hover:scale-[1.02] h-auto">
+              <button
+                onClick={() => {
+                  const link = document.createElement("a");
+                  link.href = "/download/ferramenta.zip";
+                  link.download = "ferramenta.zip";
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 to-amber-600 text-[#030712] px-10 py-7 font-extrabold text-xl shadow-2xl shadow-amber-500/20 hover:shadow-amber-400/40 transition-all hover:-translate-y-1 hover:scale-[1.02] h-auto cursor-pointer"
+              >
                 <Download className="h-6 w-6" /> Baixar Ferramenta
-              </a>
+              </button>
             </div>
           </div>
         </section>
