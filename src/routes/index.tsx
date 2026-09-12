@@ -56,31 +56,31 @@ function Index() {
   ];
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center px-6 py-16 md:py-24">
+    <main className="min-h-screen bg-[#030712] text-slate-100 flex flex-col items-center px-6 py-20 md:py-28">
       <div className="w-full max-w-5xl flex flex-col items-center gap-12 md:gap-16">
         <header className="text-center space-y-6">
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-transparent bg-gradient-to-b from-cyan-400 via-amber-400 to-orange-600 bg-clip-text drop-shadow-sm">
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-transparent bg-gradient-to-b from-amber-300 via-amber-100 to-amber-600 bg-clip-text drop-shadow-sm">
             NOVO ROBÔ
           </h1>
-          <p className="text-xl md:text-2xl text-amber-100 max-w-3xl mx-auto leading-relaxed font-normal">
+            <p className="text-xl md:text-2xl text-amber-50/90 max-w-3xl mx-auto leading-relaxed font-light">
             O Robô Fênix Ponto D opera automaticamente em pares como GBP/USD e XAU/USD. 
             Sim — ele une as duas ferramentas em uma estratégia híbrida que combina lógica avançada com análise técnica de alta precisão.
           </p>
         </header>
 
         <section id="operacao-assertiva" className="w-full">
-          <div className="rounded-3xl border border-cyan-900/20 bg-black/50 backdrop-blur-xl p-8 md:p-12 shadow-2xl shadow-cyan-500/10">
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-amber-300 mb-6">
+          <div className="rounded-3xl border border-amber-500/10 bg-[#060b17]/80 backdrop-blur-2xl p-8 md:p-14 shadow-2xl shadow-amber-900/5">
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-amber-200 mb-6">
               Estratégia e Funcionamento
             </h2>
-            <p className="text-cyan-100 max-w-2xl mx-auto mb-8 text-lg leading-relaxed font-medium">
+            <p className="text-amber-100/90 max-w-2xl mx-auto mb-8 text-lg leading-relaxed font-light">
               Sim. O robô une as duas ferramentas: combina a lógica do "EA Fênix" com análise técnica avançada para momentos de entrada e saída. 
               O objetivo é executar operações com agilidade e controle rigoroso de risco.
             </p>
             <div className="flex justify-center">
               <StrategyChart />
             </div>
-            <p className="mt-8 text-sm text-slate-200 font-medium text-center">
+            <p className="mt-8 text-sm text-slate-300 font-medium text-center tracking-wide">
               A assertividade é demonstrada nos gráficos históricos. Taxa de acerto média (win rate) variável por período e condição de mercado.
             </p>
           </div>
@@ -89,7 +89,7 @@ function Index() {
         <a
           href="/downloads/Robo_Fenix_Ponto_D.mq5"
           download
-          className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-cyan-400 to-amber-300 text-slate-950 px-10 py-5 font-extrabold text-xl shadow-2xl hover:shadow-cyan-300/50 transition-all hover:-translate-y-1"
+          className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-amber-300 to-amber-600 text-[#030712] px-10 py-5 font-extrabold text-xl shadow-2xl shadow-amber-500/20 hover:shadow-amber-400/40 transition-all hover:-translate-y-1 hover:scale-[1.02]"
         >
           <Download className="h-6 w-6" /> Baixar Robô Fênix Ponto D
         </a>
