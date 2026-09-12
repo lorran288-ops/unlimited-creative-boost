@@ -85,14 +85,19 @@ function Index() {
 
         <section id="operacao-assertiva" className="w-full">
           <div className="rounded-3xl border border-amber-500/10 bg-[#060b17]/80 backdrop-blur-2xl p-8 md:p-14 shadow-2xl shadow-amber-900/5">
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-amber-200 mb-6">
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-amber-200 mb-6 text-center">
               Segurança com Tecnologia de Ponta
             </h2>
-            <p className="text-amber-100/90 max-w-2xl mx-auto mb-8 text-lg leading-relaxed font-light">
+            <p className="text-amber-100/90 max-w-2xl mx-auto mb-8 text-lg leading-relaxed font-light text-center">
               Monitoramento 24h, equipes qualificadas e resposta rápida para qualquer eventualidade. Nossa prioridade é a proteção contínua do que é importante para você.
             </p>
             <div className="flex justify-center">
               <InteractiveVideo />
+            </div>
+            <div className="mt-10 w-full flex justify-center">
+              <div className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center">
+                <StrategyChart />
+              </div>
             </div>
           </div>
         </section>
