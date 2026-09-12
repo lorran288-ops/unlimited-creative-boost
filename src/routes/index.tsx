@@ -91,11 +91,11 @@ function Index() {
             <Button
               asChild
               size="lg"
-              variant="outline"
-              className="text-lg px-8 py-6 rounded-full border-2"
+              variant="secondary"
+              className="text-lg px-8 py-6 rounded-full shadow-lg"
             >
-              <a href="/downloads/Robo_Fenix_Ponto_D.mq5" download>
-                <Download className="mr-2 h-5 w-5" /> Novo Robô
+              <a href="#operacao-assertiva">
+                Saiba Mais sobre a Estratégia
               </a>
             </Button>
           </div>
@@ -127,17 +127,22 @@ function Index() {
       </section>
 
       {/* Robô Assertivo — Gráficos H30 */}
-      <section className="py-20 px-6 bg-slate-950">
+      <section id="operacao-assertiva" className="py-20 px-6 bg-slate-950">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-10">
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white mb-4">
-              Operação <span className="text-amber-400">Assertiva</span>
+              Como Funciona o Novo Robô
             </h2>
             <p className="text-slate-400 max-w-xl mx-auto">
-              Mescla das estratégias do EA Fênix e dos sistemas de análise para execução agressiva e protegida em GBP/USD H30 e XAU/USD.
+              O Robô Fênix Ponto D é um sistema de trading automático que opera em pares como GBP/USD e XAU/USD. Sua estratégia é um híbrido que combina a lógica do "EA Fênix" com uma análise técnica avançada para momentos de entrada e saída. O objetivo é executar operações com agilidade e controle de risco.
             </p>
           </div>
           <StrategyChart />
+          <div className="mt-8 text-center text-slate-300">
+            <p className="text-sm">
+              A assertividade é demonstrada nos gráficos históricos. Taxa de acerto média (win rate) variável por período e condição de mercado.
+            </p>
+          </div>
         </div>
       </section>
 
