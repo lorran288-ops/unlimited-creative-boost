@@ -59,10 +59,10 @@ function Index() {
     <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center px-6 py-16 md:py-24">
       <div className="w-full max-w-5xl flex flex-col items-center gap-12 md:gap-16">
         <header className="text-center space-y-6">
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-transparent bg-gradient-to-b from-cyan-300 via-white to-amber-300 bg-clip-text drop-shadow-sm">
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-transparent bg-gradient-to-b from-cyan-400 via-amber-400 to-orange-600 bg-clip-text drop-shadow-sm">
             NOVO ROBÔ
           </h1>
-          <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-light">
+          <p className="text-xl md:text-2xl text-amber-100 max-w-3xl mx-auto leading-relaxed font-normal">
             O Robô Fênix Ponto D opera automaticamente em pares como GBP/USD e XAU/USD. 
             Sim — ele une as duas ferramentas em uma estratégia híbrida que combina lógica avançada com análise técnica de alta precisão.
           </p>
@@ -70,17 +70,17 @@ function Index() {
 
         <section id="operacao-assertiva" className="w-full">
           <div className="rounded-3xl border border-slate-800 bg-slate-900/70 backdrop-blur-xl p-8 md:p-12 shadow-2xl shadow-cyan-500/10">
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white mb-6">
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-amber-300 mb-6">
               Estratégia e Funcionamento
             </h2>
-            <p className="text-slate-300 max-w-2xl mx-auto mb-8 text-lg leading-relaxed">
+            <p className="text-cyan-100 max-w-2xl mx-auto mb-8 text-lg leading-relaxed font-medium">
               Sim. O robô une as duas ferramentas: combina a lógica do "EA Fênix" com análise técnica avançada para momentos de entrada e saída. 
               O objetivo é executar operações com agilidade e controle rigoroso de risco.
             </p>
             <div className="flex justify-center">
               <StrategyChart />
             </div>
-            <p className="mt-8 text-sm text-slate-400 text-center">
+            <p className="mt-8 text-sm text-slate-200 font-medium text-center">
               A assertividade é demonstrada nos gráficos históricos. Taxa de acerto média (win rate) variável por período e condição de mercado.
             </p>
           </div>
