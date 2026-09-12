@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, ShieldCheck, UserCheck, Clock, CheckCircle2, Phone, Video, Download } from "lucide-react";
 import { InteractiveVideo } from "@/components/video/InteractiveVideo";
+import { StrategyChart } from "@/components/robot/StrategyChart";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/")({
@@ -112,6 +113,21 @@ function Index() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      </section>
+
+      {/* Robô Assertivo — Gráficos H30 */}
+      <section className="py-20 px-6 bg-slate-950">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white mb-4">
+              Operação <span className="text-amber-400">Assertiva</span>
+            </h2>
+            <p className="text-slate-400 max-w-xl mx-auto">
+              Mescla das estratégias do EA Fênix e dos sistemas de análise para execução agressiva e protegida em GBP/USD H30 e XAU/USD.
+            </p>
+          </div>
+          <StrategyChart />
         </div>
       </section>
 
