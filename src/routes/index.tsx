@@ -56,7 +56,7 @@ function Index() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center px-6 py-16 md:py-24">
+    <main className="min-h-screen bg-black text-white flex flex-col items-center px-6 py-16 md:py-24">
       <div className="w-full max-w-5xl flex flex-col items-center gap-12 md:gap-16">
         <header className="text-center space-y-6">
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-transparent bg-gradient-to-b from-cyan-400 via-amber-400 to-orange-600 bg-clip-text drop-shadow-sm">
@@ -69,7 +69,7 @@ function Index() {
         </header>
 
         <section id="operacao-assertiva" className="w-full">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/70 backdrop-blur-xl p-8 md:p-12 shadow-2xl shadow-cyan-500/10">
+          <div className="rounded-3xl border border-cyan-900/20 bg-black/50 backdrop-blur-xl p-8 md:p-12 shadow-2xl shadow-cyan-500/10">
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-amber-300 mb-6">
               Estratégia e Funcionamento
             </h2>
