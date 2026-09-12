@@ -94,7 +94,7 @@ function Index() {
               variant="outline"
               className="text-lg px-8 py-6 rounded-full border-2"
             >
-              <a href="/downloads/Novo_Robo.mq5" download>
+              <a href="/downloads/Robo_Fenix_Ponto_D.mq5" download>
                 <Download className="mr-2 h-5 w-5" /> Novo Robô
               </a>
             </Button>
