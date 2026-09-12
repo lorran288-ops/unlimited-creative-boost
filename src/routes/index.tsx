@@ -64,7 +64,7 @@ function Index() {
           </h1>
           <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-light">
             O Robô Fênix Ponto D opera automaticamente em pares como GBP/USD e XAU/USD. 
-            Uma estratégia híbrida que une lógica avançada com análise técnica de alta precisão.
+            Sim — ele une as duas ferramentas em uma estratégia híbrida que combina lógica avançada com análise técnica de alta precisão.
           </p>
         </header>
 
@@ -74,7 +74,7 @@ function Index() {
               Estratégia e Funcionamento
             </h2>
             <p className="text-slate-300 max-w-2xl mx-auto mb-8 text-lg leading-relaxed">
-              O robô combina a lógica do "EA Fênix" com análise técnica avançada para momentos de entrada e saída. 
+              Sim. O robô une as duas ferramentas: combina a lógica do "EA Fênix" com análise técnica avançada para momentos de entrada e saída. 
               O objetivo é executar operações com agilidade e controle rigoroso de risco.
             </p>
             <div className="flex justify-center">
