@@ -77,10 +77,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Robô - Download da Ferramenta" },
+      { title: "Robô Fênix Express Ponto D" },
       { name: "description", content: "Baixe a ferramenta do robô e comece a usar." },
       { name: "author", content: "Robô" },
-      { property: "og:title", content: "Robô - Download da Ferramenta" },
+      { property: "og:title", content: "Robô Fênix Express Ponto D" },
       { property: "og:description", content: "Baixe a ferramenta do robô e comece a usar." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
