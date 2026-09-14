@@ -1,17 +1,14 @@
 //+------------------------------------------------------------------+
-//|                 Robo_FenixTrader_2.7_Multi3_Margem.mq5            |
+//|                 Robo_FenixTrader_2.1_Entrada_Automatica_D.mq5     |
 //|   EA de Padroes Harmonicos (XABCD) - Gartley / Morcego /          |
 //|   Borboleta / Caranguejo / Tubarao                                |
-//|   Gestao diaria: STOP 2% | ALVO 4% | ate 3 entradas por dia       |
+//|   Gestao diaria: STOP 1% | ALVO 2% | ate 2 entradas por dia       |
 //|   Referencia de proporcoes: LiteFinance - Padroes Harmonicos      |
 //+------------------------------------------------------------------+
-//| v2.70 - Operacao em 3 ativos com gestao somada da conta:          |
-//|  - Stop diario 2.1% e meta diaria 4.2% (o dobro), somando os      |
-//|    resultados dos 3 ativos                                        |
-//|  - Risco 0.70% e alvo 1.40% por operacao (3 x 0.70 = 2.10)        |
-//|  - Maximo 3 posicoes abertas na conta (1 por ativo)               |
-//|  - Parcial no 1:1 + stop no zero a zero mantidos                  |
-//|  - Lote reduzido pela margem livre (fim do "not enough money")    |
+//| v2.50 - Gestao por operacao definida pelo usuario:                |
+//|  - Risco fixo de 1.00% e alvo de 2.00% por operacao (RR 1:2)      |
+//|  - Mantem stop diario 2%, meta diaria 4%, 3 entradas/dia e        |
+//|    apenas 1 posicao aberta por vez                                |
 //+------------------------------------------------------------------+
 //| v2.00 - Entrada imediata no ponto D:                              |
 //|  - Deteccao roda a cada tick (nao espera fechar a vela)           |
@@ -35,20 +32,49 @@
 //|  - Botoes manuais agora respeitam bloqueio e limite de entradas   |
 //|  - Precisao do lote calculada pelo SYMBOL_VOLUME_STEP             |
 //+------------------------------------------------------------------+
+//| v3.20 - FIGURA TRAVADA E FIBONACCI ESTRITO                        |
+//|  - O ponto D NUNCA usa a vela em formacao: so pivo confirmado     |
+//|  - Deteccao roda apenas quando fecha a vela do timeframe do sinal |
+//|  - Proporcoes Fibonacci estritas (tolerancia 0.05) e projecao CD  |
+//|    obrigatoria: a figura para de "andar" junto com o preco        |
+//|  - Padrao generico desligado (somente Gartley/Morcego/Borboleta/  |
+//|    Caranguejo/Tubarao com Fibonacci valido)                       |
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//| v4.00 - PRECISAO CIRURGICA NO PONTO D                             |
+//|  Reestruturacao completa da logica de ENTRADA e RISCO:            |
+//|  1) Entrada SOMENTE no ponto D estrutural confirmado, com o preco |
+//|     ainda DENTRO da zona de reversao (PRZ). Se o preco ja se      |
+//|     afastou (InpMaxDistPRZ_ATR x ATR), o sinal e descartado.      |
+//|  2) Filtro de gatilho no D com 3 confirmacoes independentes:      |
+//|     - Pin Bar / rejeicao de preco na zona                        |
+//|     - Divergencia de RSI no tempo grafico menor                   |
+//|     - Exaustao de volume (clima de fluxo)                         |
+//|     Exija 1, 2 ou 3 confirmacoes em InpMinConfirmacoes.           |
+//|  3) Stop tecnico OBRIGATORIO atras do extremo do ponto X ou do    |
+//|     pivo anterior (o que estiver mais protegido) + folga ATR.     |
+//|  4) Take profit dinamico com RR minimo 1:2 e parciais nos niveis  |
+//|     de Fibonacci do impulso CD (38.2% e 61.8%) + zero a zero.     |
+//|  5) Execucao no fechamento do candle de referencia (sem ruido de  |
+//|     processamento tick a tick).                                   |
+//|  AJUSTE DE SENSIBILIDADE POR ATIVO: veja o grupo                  |
+//|  "=== GATILHO CIRURGICO NO PONTO D ===" (distancia da PRZ, pavio  |
+//|  do pin bar, RSI e volume) e "InpTolerancia" nos harmonicos.      |
+//+------------------------------------------------------------------+
 #property copyright "Robo Gartley Harmonico"
-#property version   "2.90"
+#property version   "4.00"
 
 #include <Trade\Trade.mqh>
 
 //======================= ENTRADAS ==================================
 input group "=== PADROES HARMONICOS ==="
-input ENUM_TIMEFRAMES InpTFSinal        = PERIOD_H1;   // Timeframe do sinal (padrao H1)
+input ENUM_TIMEFRAMES InpTFSinal        = PERIOD_M30;  // Timeframe do sinal (padrao)
 input int    InpFractalDepth            = 2;           // Profundidade do pivo (velas de cada lado)
 input int    InpBarrasBusca             = 600;         // Barras analisadas para achar XABCD
-input double InpTolerancia              = 0.12;        // Tolerancia dos niveis Fibonacci (0.12)
+input double InpTolerancia              = 0.05;        // Tolerancia dos niveis Fibonacci (estrito 0.05)
 input int    InpMaxPivos                = 40;          // Quantidade de pivos analisados
-input bool   InpUsarFiltroCD            = false;       // Exigir projecao CD dentro da faixa
-input bool   InpAceitarGenerico         = true;        // Aceitar padrao harmonico generico (ABCD)
+input bool   InpUsarFiltroCD            = true;        // Exigir projecao CD dentro da faixa Fibonacci
+input bool   InpAceitarGenerico         = false;       // Aceitar padrao harmonico generico (ABCD)
 input bool   InpLogDiagnostico          = true;        // Imprimir diagnostico no Especialistas
 input bool   InpUsarGartley             = true;        // Gartley (B 0.618 | D 0.786)
 input bool   InpUsarMorcego             = true;        // Morcego (B 0.382-0.50 | D 0.886)
@@ -60,19 +86,14 @@ input double InpCorpoMinimo             = 0.30;        // Forca minima do corpo 
 input double InpDistanciaPRZ            = 2.0;         // Distancia maxima do preco ao ponto D (x ATR)
 
 input group "=== GESTAO DIARIA (percentual do saldo) ==="
-input double InpStopDiarioPct           = 1.0;         // Stop maximo diario (%) - conta toda
-input double InpAlvoDiarioPct           = 2.0;         // Alvo maximo diario (%) - o dobro do stop
-input int    InpMaxEntradasDia          = 2;           // Maximo de entradas por dia (1 a 2)
-input int    InpMaxPosicoesAbertas      = 1;           // Maximo de posicoes abertas no MESMO ativo
-input bool   InpGestaoGlobal            = true;        // Gestao somada da conta (3 ativos juntos)
-input int    InpMaxPosicoesGlobal       = 3;           // Maximo de posicoes abertas na conta (3 ativos)
-input bool   InpAjustarLotePorMargem    = true;        // Reduzir o lote conforme a margem livre
-input double InpMargemLivreUsoPct       = 30.0;        // Usar no maximo X% da margem livre por ordem
-input double InpLoteMaximo              = 0.0;         // Limite de lote (0 = sem limite)
+input double InpStopDiarioPct           = 1.0;         // Stop maximo diario (%)
+input double InpAlvoDiarioPct           = 2.0;         // Alvo maximo diario (%)
+input int    InpMaxEntradasDia          = 2;           // Maximo de entradas por dia (1 a 3)
+input int    InpMaxPosicoesAbertas      = 1;           // Maximo de posicoes abertas ao mesmo tempo
 input double InpRRMinimo                = 1.2;         // Razao risco/retorno minima aceita
 input bool   InpUsarRiscoFixo           = true;        // Usar risco/alvo fixos por operacao (abaixo)
-input double InpRiscoPorEntradaPct      = 0.10;        // Stop por operacao (% do saldo) - 2 x 0,10 = 0,20
-input double InpAlvoPorEntradaPct       = 0.20;        // Take profit por operacao (% do saldo) - o dobro
+input double InpRiscoPorEntradaPct      = 0.50;        // Stop por operacao (% do saldo)
+input double InpAlvoPorEntradaPct       = 1.00;        // Take profit por operacao (% do saldo)
 
 input group "=== EXECUCAO ==="
 input double InpFolgaStopATR            = 0.5;         // Folga do stop (x ATR) alem do ponto X
@@ -105,12 +126,59 @@ input bool   InpAlertaPadrao            = true;        // Alerta quando achar pa
 input bool   InpEntrarAoFecharFigura    = true;        // Entrar assim que a figura fechar no ponto D
 input bool   InpIgnorarDistanciaPRZ     = true;        // Ignorar limite de distancia do preco ao D
 input bool   InpIgnorarRRMinimo         = true;        // Ignorar filtro de RR minimo
-input bool   InpDNaVelaAtual            = true;        // Aceitar ponto D na vela em formacao (entrada imediata)
-input int    InpScanSegundos            = 1;           // Reavaliar as figuras a cada X segundos (0 = todo tick)
+input bool   InpDNaVelaAtual            = false;       // NAO usar a vela em formacao: ponto D fixo (pivo confirmado)
+input int    InpScanSegundos            = 0;           // (nao usado na v3.20: analise so no fechamento da vela)
+
+input group "=== ROMPIMENTO COMO ESTRATEGIA SEPARADA (DESLIGADO NA v3.10) ==="
+input bool   InpUsarORB                 = false;       // DESLIGADO: o rompimento agora e apenas confirmacao (fusao)
+input ENUM_TIMEFRAMES InpTFSinalORB     = PERIOD_M30;  // Timeframe do sinal de rompimento
+input int    InpORBLookback             = 6;           // Barras do range analisado
+input double InpORBFatorRompimento      = 0.15;        // Margem minima de rompimento (% do range)
+input double InpORBForcaCorpoMin        = 0.65;        // Forca minima do corpo da vela (0-1)
+input bool   InpORBFiltroEMA            = true;        // Filtro de tendencia EMA
+input int    InpORBEmaPeriodo           = 200;         // Periodo da EMA de tendencia
+input double InpORBStopATRMult          = 1.5;         // Stop do rompimento (x ATR)
+input bool   InpPrioridadeHarmonico     = true;        // Harmonico tem prioridade sobre o rompimento
+
+input group "=== FUSAO: HARMONICO CONFIRMADO POR FORCA/ROMPIMENTO ==="
+input bool   InpUsarFusao                = true;        // Exigir confirmacao de forca/rompimento no ponto D
+input double InpFusaoCorpoMin            = 0.45;        // Forca minima do corpo da vela de confirmacao (0-1)
+input int    InpFusaoLookback            = 3;           // Barras do micro-range para o rompimento de gatilho
+input bool   InpFusaoExigirRompimento    = true;        // Exigir rompimento do micro-range na direcao do padrao
+input bool   InpFusaoFiltroEMA           = false;       // Exigir preco a favor da EMA rapida
+input int    InpFusaoEmaPeriodo          = 50;          // Periodo da EMA rapida da fusao
+
+input group "=== GATILHO CIRURGICO NO PONTO D ==="
+// ---- AJUSTE DE SENSIBILIDADE POR ATIVO: comece por estes parametros ----
+input bool   InpGatilhoCirurgico          = true;        // Exigir gatilho cirurgico no ponto D
+input double InpMaxDistPRZ_ATR            = 0.60;        // Distancia MAXIMA do preco ao ponto D (x ATR) - menor = mais cirurgico
+input int    InpMinConfirmacoes           = 1;           // Confirmacoes minimas exigidas (1 a 3)
+input bool   InpUsarPinBar                = true;        // Confirmacao 1: rejeicao de preco (pin bar) na zona
+input double InpPinBarPavioMin            = 0.50;        // Pavio de rejeicao minimo (fracao do range da vela)
+input double InpPinBarCorpoMax            = 0.45;        // Corpo maximo da vela de rejeicao (fracao do range)
+input bool   InpUsarRSIDiv                = true;        // Confirmacao 2: divergencia de RSI no tempo menor
+input ENUM_TIMEFRAMES InpTFGatilho        = PERIOD_M5;   // Tempo grafico menor do gatilho
+input int    InpRSIPeriodo                = 14;          // Periodo do RSI
+input int    InpDivLookback               = 12;          // Barras analisadas na divergencia
+input bool   InpUsarExaustaoVolume        = true;        // Confirmacao 3: exaustao de volume/fluxo
+input int    InpVolMedia                  = 20;          // Barras da media de volume
+input double InpVolFator                  = 1.20;        // Volume da vela do D / media (climax)
+
+input group "=== ALVOS DINAMICOS (RR 1:2 + PARCIAIS FIBONACCI) ==="
+input double InpRRObrigatorio             = 2.0;         // Risco/Retorno minimo obrigatorio do alvo final
+input bool   InpParciaisFibonacci         = true;        // Fracionar parciais nos Fibos do impulso CD
+input double InpFibParcial1               = 38.2;        // Nivel 1 do impulso CD (%) - parcial 1
+input double InpFibParcial2               = 61.8;        // Nivel 2 do impulso CD (%) - parcial 2
+input double InpPercFibParcial1           = 40.0;        // Volume fechado na parcial 1 (%)
+input double InpPercFibParcial2           = 30.0;        // Volume fechado na parcial 2 (%)
 
 //======================= GLOBAIS ===================================
 CTrade   trade;
 int      hATR = INVALID_HANDLE;
+int      hEMA_ORB = INVALID_HANDLE;
+int      hEMA_FUS = INVALID_HANDLE;
+datetime gUltimaBarraORB = 0;
+string   gUltimoSinalTexto = "";
 
 double   gSaldoInicioDia = 0.0;
 int      gDiaAtual       = -1;
@@ -121,6 +189,11 @@ datetime gUltimaBarraSinal = 0;
 datetime gUltimoScan       = 0;
 
 string   PFX = "GH_";
+
+//--- v4.00: handles e memoria dos alvos parciais Fibonacci
+int      hRSI = INVALID_HANDLE;
+double   gAlvoFib1 = 0.0;      // nivel 38.2% do impulso CD (parcial 1)
+double   gAlvoFib2 = 0.0;      // nivel 61.8% do impulso CD (parcial 2)
 
 //--- estrutura do padrao encontrado
 struct Harmonico
@@ -190,9 +263,8 @@ int PosicoesEA()
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
       if(!PositionSelectByTicket(PositionGetTicket(i))) continue;
-      if(PositionGetInteger(POSITION_MAGIC) != (long)InpMagic) continue;
-      if(!InpGestaoGlobal && PositionGetString(POSITION_SYMBOL) != _Symbol) continue;
-      n++;
+      if(PositionGetInteger(POSITION_MAGIC) == (long)InpMagic &&
+         PositionGetString(POSITION_SYMBOL) == _Symbol) n++;
    }
    return n;
 }
@@ -220,7 +292,7 @@ double ResultadoFechadoHoje()
       ulong t = HistoryDealGetTicket(i);
       if(t == 0) continue;
       if(HistoryDealGetInteger(t, DEAL_MAGIC) != (long)InpMagic) continue;
-      if(!InpGestaoGlobal && HistoryDealGetString(t, DEAL_SYMBOL) != _Symbol) continue;
+      if(HistoryDealGetString(t, DEAL_SYMBOL) != _Symbol) continue;
       long entry = HistoryDealGetInteger(t, DEAL_ENTRY);
       if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_INOUT) continue;
       soma += HistoryDealGetDouble(t, DEAL_PROFIT)
@@ -246,7 +318,7 @@ int EntradasHojeHistorico()
       ulong t = HistoryDealGetTicket(i);
       if(t == 0) continue;
       if(HistoryDealGetInteger(t, DEAL_MAGIC) != (long)InpMagic) continue;
-      if(!InpGestaoGlobal && HistoryDealGetString(t, DEAL_SYMBOL) != _Symbol) continue;
+      if(HistoryDealGetString(t, DEAL_SYMBOL) != _Symbol) continue;
       if(HistoryDealGetInteger(t, DEAL_ENTRY) == DEAL_ENTRY_IN) n++;
    }
    return n;
@@ -319,9 +391,9 @@ bool ColetarPivos(double &preco[], datetime &tempo[], int &tipo[], int maxPivos)
    if(bars < 30) return false;
 
    int ultimoTipo = 0;
-   // Com InpDNaVelaAtual o scan comeca na vela em formacao (i = 0): o ponto D
-   // e reconhecido no momento em que o preco chega, sem esperar as velas de
-   // confirmacao do fractal a direita.
+   // v3.20: com InpDNaVelaAtual = false o scan comeca depois das velas de
+   // confirmacao do fractal (i = d + 1). O pivo D so entra na figura quando
+   // esta confirmado por velas fechadas dos dois lados -> a figura nao muda.
    int iInicial = InpDNaVelaAtual ? 0 : (d + 1);
    for(int i = iInicial; i <= bars; i++)
    {
@@ -370,7 +442,8 @@ bool ColetarPivos(double &preco[], datetime &tempo[], int &tipo[], int maxPivos)
 //======================= VALIDACAO DO PADRAO =======================
 bool ClassificarPadrao(double retB, double retC, double projCD, double retD, string &nome)
 {
-   double tol = InpTolerancia;
+   // v3.20: tolerancia estrita aplicada a todos os niveis Fibonacci
+   double tol = MathMin(0.08, MathMax(0.01, InpTolerancia));
    bool   cd  = !InpUsarFiltroCD;   // quando o filtro CD esta desligado, sempre passa
 
    if(InpUsarGartley && DentroTol(retB, 0.618, tol) &&
@@ -466,48 +539,6 @@ double CalcularLote(double distanciaStop, double riscoPct)
    return NormalizeDouble(lote, DigitosLote());
 }
 
-// Reduz o lote para caber na margem livre da conta. Evita o erro
-// "not enough money" quando o robo roda em varios ativos ao mesmo tempo.
-double LimitarLotePorMargem(double lote, const bool compra, const double preco)
-{
-   if(lote <= 0.0) return 0.0;
-
-   double minL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-   double stepL= SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
-   if(stepL <= 0) stepL = 0.01;
-
-   if(InpLoteMaximo > 0.0 && lote > InpLoteMaximo)
-      lote = MathFloor(InpLoteMaximo / stepL) * stepL;
-
-   if(!InpAjustarLotePorMargem)
-      return NormalizeDouble(lote, DigitosLote());
-
-   double livre = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
-   double limite = livre * MathMax(1.0, InpMargemLivreUsoPct) / 100.0;
-   if(limite <= 0.0) return 0.0;
-
-   ENUM_ORDER_TYPE tipo = compra ? ORDER_TYPE_BUY : ORDER_TYPE_SELL;
-   double margem = 0.0;
-   if(!OrderCalcMargin(tipo, _Symbol, lote, preco, margem) || margem <= 0.0)
-      return NormalizeDouble(lote, DigitosLote());
-
-   if(margem > limite)
-   {
-      double fator = limite / margem;
-      double novo  = MathFloor((lote * fator) / stepL) * stepL;
-      PrintFormat("[MARGEM] Lote %.2f exige %.2f de margem (limite %.2f) - reduzido para %.2f",
-                  lote, margem, limite, novo);
-      lote = novo;
-   }
-
-   if(lote < minL)
-   {
-      PrintFormat("[MARGEM] Margem livre insuficiente (%.2f) - entrada pulada", livre);
-      return 0.0;
-   }
-   return NormalizeDouble(lote, DigitosLote());
-}
-
 bool SpreadOk()
 {
    if(!InpUsarSpreadMaximo) return true;
@@ -536,6 +567,144 @@ bool VelaConfirma(bool compra)
    return (compra ? (c > o) : (c < o));
 }
 
+//============ v4.00 - GATILHO CIRURGICO NO PONTO D =================
+// Cada funcao abaixo e uma confirmacao INDEPENDENTE. O robo soma quantas
+// confirmaram e compara com InpMinConfirmacoes. Para deixar o robo mais
+// cirurgico, aumente InpMinConfirmacoes; para mais sinais, reduza para 1.
+
+// CONFIRMACAO 1 - Pin Bar / rejeicao de preco: a vela de referencia precisa
+// ter pavio longo do lado contrario ao trade (o preco testou a zona e foi
+// rejeitado) e corpo pequeno.
+bool ConfPinBar(const bool compra)
+{
+   double o = iOpen (_Symbol, InpTFSinal, 1);
+   double c = iClose(_Symbol, InpTFSinal, 1);
+   double h = iHigh (_Symbol, InpTFSinal, 1);
+   double l = iLow  (_Symbol, InpTFSinal, 1);
+   double range = h - l;
+   if(range <= 0) return false;
+
+   double corpo      = MathAbs(c - o) / range;
+   double pavioBaixo = (MathMin(o, c) - l) / range;   // rejeicao de fundo
+   double pavioAlto  = (h - MathMax(o, c)) / range;   // rejeicao de topo
+   if(corpo > InpPinBarCorpoMax) return false;
+
+   return compra ? (pavioBaixo >= InpPinBarPavioMin)
+                 : (pavioAlto  >= InpPinBarPavioMin);
+}
+
+// CONFIRMACAO 2 - Divergencia de RSI no tempo grafico menor:
+// compra -> preco faz fundo mais baixo e o RSI faz fundo mais alto;
+// venda  -> preco faz topo mais alto e o RSI faz topo mais baixo.
+bool ConfDivergenciaRSI(const bool compra)
+{
+   if(hRSI == INVALID_HANDLE) return false;
+   int n = MathMax(4, InpDivLookback);
+
+   double rsi[];
+   ArraySetAsSeries(rsi, true);
+   if(CopyBuffer(hRSI, 0, 0, n + 2, rsi) < n + 2) return false;
+
+   int    idxExtremo = 1;
+   double extremo    = compra ? iLow(_Symbol, InpTFGatilho, 1)
+                              : iHigh(_Symbol, InpTFGatilho, 1);
+   int    idxAnterior = -1;
+   double anterior    = 0.0;
+
+   // procura o extremo anterior de preco na janela analisada
+   for(int i = 2; i <= n; i++)
+   {
+      double v = compra ? iLow(_Symbol, InpTFGatilho, i)
+                        : iHigh(_Symbol, InpTFGatilho, i);
+      if(idxAnterior < 0 || (compra ? (v < anterior) : (v > anterior)))
+      {
+         anterior    = v;
+         idxAnterior = i;
+      }
+   }
+   if(idxAnterior < 0) return false;
+
+   bool precoRompeu = compra ? (extremo <= anterior) : (extremo >= anterior);
+   bool rsiDiverge  = compra ? (rsi[idxExtremo] > rsi[idxAnterior])
+                             : (rsi[idxExtremo] < rsi[idxAnterior]);
+   bool zonaOk      = compra ? (rsi[idxExtremo] < 50.0) : (rsi[idxExtremo] > 50.0);
+
+   return (precoRompeu && rsiDiverge && zonaOk);
+}
+
+// CONFIRMACAO 3 - Exaustao de volume/fluxo: volume da vela do ponto D acima
+// da media (climax de venda no fundo / de compra no topo).
+bool ConfExaustaoVolume()
+{
+   int n = MathMax(3, InpVolMedia);
+   long soma = 0;
+   for(int i = 2; i <= n + 1; i++) soma += iTickVolume(_Symbol, InpTFSinal, i);
+   if(soma <= 0) return false;
+   double media = (double)soma / (double)n;
+   long   volD  = iTickVolume(_Symbol, InpTFSinal, 1);
+   return ((double)volD >= media * InpVolFator);
+}
+
+// Valida o ponto D: preco AINDA na zona de reversao + confirmacoes de gatilho.
+// Nenhuma entrada antecipada (padrao nao fechado) nem atrasada (preco longe).
+bool GatilhoCirurgicoOk(const Harmonico &p)
+{
+   if(!InpGatilhoCirurgico) return true;
+
+   double atr = ATRVal();
+   if(atr <= 0) atr = 20 * _Point;
+
+   // 1) o preco precisa estar dentro da zona do ponto D
+   double refPreco = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double limite   = atr * MathMax(0.05, InpMaxDistPRZ_ATR);
+   double dist     = MathAbs(refPreco - p.D);
+   if(dist > limite)
+   {
+      if(InpLogDiagnostico)
+         PrintFormat("[GATILHO] %s descartado: preco a %.*f do ponto D (limite %.*f) - entrada tardia evitada",
+                     p.nome, _Digits, dist, _Digits, limite);
+      return false;
+   }
+
+   // 2) confirmacoes independentes
+   int    conf   = 0;
+   string quais  = "";
+   if(InpUsarPinBar          && ConfPinBar(p.compra))   { conf++; quais += "PinBar "; }
+   if(InpUsarRSIDiv          && ConfDivergenciaRSI(p.compra)) { conf++; quais += "RSI-Div "; }
+   if(InpUsarExaustaoVolume  && ConfExaustaoVolume())   { conf++; quais += "Volume "; }
+
+   int minimo = MathMax(1, MathMin(3, InpMinConfirmacoes));
+   if(conf < minimo)
+   {
+      if(InpLogDiagnostico)
+         PrintFormat("[GATILHO] %s aguardando: %d de %d confirmacoes no ponto D (%s)",
+                     p.nome, conf, minimo, (quais == "" ? "nenhuma" : quais));
+      return false;
+   }
+
+   if(InpLogDiagnostico)
+      PrintFormat("[GATILHO] %s VALIDADO no ponto D com %d confirmacao(oes): %s",
+                  p.nome, conf, quais);
+   return true;
+}
+
+// Stop tecnico: sempre atras do extremo estrutural do ponto X OU do pivo
+// anterior mais protetivo, com folga de ATR para ruido de spread/mecha.
+double StopTecnico(const Harmonico &p, const double folga)
+{
+   double extremo = p.compra ? MathMin(p.D, p.X) : MathMax(p.D, p.X);
+
+   // pivo anterior (mais recente antes do D) como protecao adicional
+   for(int i = 0; i < gQtdPivos; i++)
+   {
+      if(gPvTempo[i] >= p.tD) continue;
+      if(p.compra && gPvTipo[i] < 0 && gPvPreco[i] < extremo) extremo = gPvPreco[i];
+      if(!p.compra && gPvTipo[i] > 0 && gPvPreco[i] > extremo) extremo = gPvPreco[i];
+      break;   // apenas o pivo imediatamente anterior
+   }
+   return p.compra ? extremo - folga : extremo + folga;
+}
+
 void TentarEntrada()
 {
    if(!InpEntradasAutomaticas)
@@ -553,7 +722,7 @@ void TentarEntrada()
       if(InpLogDiagnostico) Print("[AUTO] Entrada bloqueada: limite diario de entradas atingido.");
       return;
    }
-   if(PosicoesEA() >= (InpGestaoGlobal ? InpMaxPosicoesGlobal : InpMaxPosicoesAbertas))
+   if(PosicoesEA() >= InpMaxPosicoesAbertas)
    {
       if(InpLogDiagnostico) Print("[AUTO] Entrada bloqueada: ja existe posicao aberta deste robo no simbolo.");
       return;
@@ -567,6 +736,12 @@ void TentarEntrada()
       if(InpLogDiagnostico) Print("[AUTO] Entrada aguardando confirmacao da vela no ponto D.");
       return;
    }
+
+   // FUSAO: o gatilho de rompimento/forca precisa concordar com o padrao
+   if(!ConfirmacaoFusao(p.compra)) return;
+
+   // v4.00: gatilho cirurgico no ponto D (zona + pin bar / RSI / volume)
+   if(!GatilhoCirurgicoOk(p)) return;
 
    double atr = ATRVal();
    double folga = atr * InpFolgaStopATR;
@@ -599,8 +774,8 @@ void TentarEntrada()
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double preco = p.compra ? ask : bid;
 
-   // Stop alem do ponto X (SLZ) com folga por ATR
-   double sl = p.compra ? MathMin(p.D, p.X) - folga : MathMax(p.D, p.X) + folga;
+   // v4.00 - STOP TECNICO: atras do extremo do X ou do pivo anterior + folga ATR
+   double sl = StopTecnico(p, folga);
    double dist = MathAbs(preco - sl);
    if(dist <= 0)
    {
@@ -608,17 +783,23 @@ void TentarEntrada()
       return;
    }
 
-   // Alvos harmonicos: 0.618 da perna AD projetada a partir de D
-   double AD = MathAbs(p.A - p.D);
-   double alvoHarm = p.compra ? p.D + AD * 0.618 : p.D - AD * 0.618;
+   // v4.00 - ALVO DINAMICO: RR minimo obrigatorio 1:2 sobre o stop tecnico
+   double riscoPct = RiscoPorEntradaPct();
+   double alvoPct  = AlvoPorEntradaPct();
+   double rrGestao = alvoPct / MathMax(0.01, riscoPct);
+   double rrAlvo   = MathMax(InpRRObrigatorio, rrGestao);   // nunca abaixo de 1:2
+   double tp = p.compra ? preco + dist * rrAlvo : preco - dist * rrAlvo;
 
-   double riscoPct = RiscoPorEntradaPct();             // 1.00% no padrao
-   double alvoPct  = AlvoPorEntradaPct();              // 2.00% no padrao
-   double rrGestao = alvoPct / MathMax(0.01, riscoPct); // = 2.0 no padrao
-   double tpGestao = p.compra ? preco + dist * rrGestao : preco - dist * rrGestao;
-
-   // usa o menor entre alvo harmonico e alvo de gestao (mais conservador)
-   double tp = p.compra ? MathMin(alvoHarm, tpGestao) : MathMax(alvoHarm, tpGestao);
+   // Parciais nos niveis de Fibonacci do impulso CD (38.2% e 61.8%)
+   double CD = MathAbs(p.C - p.D);
+   gAlvoFib1 = 0.0; gAlvoFib2 = 0.0;
+   if(InpParciaisFibonacci && CD > 0)
+   {
+      gAlvoFib1 = p.compra ? p.D + CD * (InpFibParcial1 / 100.0)
+                           : p.D - CD * (InpFibParcial1 / 100.0);
+      gAlvoFib2 = p.compra ? p.D + CD * (InpFibParcial2 / 100.0)
+                           : p.D - CD * (InpFibParcial2 / 100.0);
+   }
    double rrFinal = MathAbs(tp - preco) / dist;
    if(!InpIgnorarRRMinimo && rrFinal < InpRRMinimo)
    {
@@ -639,10 +820,9 @@ void TentarEntrada()
    AjustarStops(p.compra, preco, sl, tp);
    dist = MathAbs(preco - sl);
    lote = CalcularLote(dist, riscoPct);
-   lote = LimitarLotePorMargem(lote, p.compra, preco);
    if(lote <= 0)
    {
-      Print("[AUTO] Entrada cancelada: lote invalido apos ajuste de stops/margem.");
+      Print("[AUTO] Entrada cancelada: lote invalido apos ajuste de stops.");
       return;
    }
 
@@ -770,14 +950,54 @@ void MarcarParcial(ulong tk)
    else { gParcialFeita[0] = tk; gQtdParcial = 1; }
 }
 
+//======= v4.00 - PARCIAIS FIBONACCI (38.2% / 61.8% do CD) + ZERO A ZERO =====
+// Parcial 1 no primeiro nivel de Fibonacci do impulso CD (ou no 1:1 caso as
+// parciais Fibonacci estejam desligadas): fecha InpPercFibParcial1 do volume
+// e joga o stop para o preco de entrada (zero a zero).
+// Parcial 2 no segundo nivel: fecha InpPercFibParcial2 do que restou.
+// O saldo restante segue para o alvo final (RR 1:2 ou melhor).
+ulong gParcial2Feita[64];
+int   gQtdParcial2 = 0;
+
+bool Parcial2JaFeita(ulong tk)
+{
+   for(int i = 0; i < gQtdParcial2; i++)
+      if(gParcial2Feita[i] == tk) return true;
+   return false;
+}
+
+void MarcarParcial2(ulong tk)
+{
+   if(gQtdParcial2 < 64) gParcial2Feita[gQtdParcial2++] = tk;
+   else { gParcial2Feita[0] = tk; gQtdParcial2 = 1; }
+}
+
+// fecha o percentual pedido respeitando lote minimo e passo da corretora
+bool FecharPercentual(ulong tk, double vol, double perc, string etiqueta)
+{
+   double loteMin = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   double passo   = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+   if(passo <= 0) passo = loteMin;
+
+   double fechar = vol * perc / 100.0;
+   fechar = MathFloor(fechar / passo) * passo;
+   fechar = NormalizeDouble(fechar, DigitosLote());
+   if(fechar < loteMin || (vol - fechar) < loteMin) return false;
+
+   if(trade.PositionClosePartial(tk, fechar))
+   {
+      PrintFormat("[%s] Ticket %I64u: fechado %.*f de %.*f",
+                  etiqueta, tk, DigitosLote(), fechar, DigitosLote(), vol);
+      return true;
+   }
+   return false;
+}
+
 void GerenciarParcial()
 {
    if(!InpSaidaParcial) return;
 
-   int    dig     = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
-   double loteMin = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-   double passo   = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
-   if(passo <= 0) passo = loteMin;
+   int dig = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
 
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
@@ -785,9 +1005,9 @@ void GerenciarParcial()
       if(!PositionSelectByTicket(tk)) continue;
       if(PositionGetInteger(POSITION_MAGIC) != (long)InpMagic) continue;
       if(PositionGetString(POSITION_SYMBOL) != _Symbol) continue;
-      if(ParcialJaFeita(tk)) continue;
 
       long   tipo = PositionGetInteger(POSITION_TYPE);
+      bool   compra = (tipo == POSITION_TYPE_BUY);
       double ab   = PositionGetDouble(POSITION_PRICE_OPEN);
       double sl   = PositionGetDouble(POSITION_SL);
       double tp   = PositionGetDouble(POSITION_TP);
@@ -797,40 +1017,41 @@ void GerenciarParcial()
       double risco = MathAbs(ab - sl);
       if(risco <= 0) continue;
 
-      bool gatilho = false;
-      if(tipo == POSITION_TYPE_BUY)
-      {
-         double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-         gatilho = (bid >= ab + risco * InpGatilhoParcial);
-      }
-      else if(tipo == POSITION_TYPE_SELL)
-      {
-         double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-         gatilho = (ask <= ab - risco * InpGatilhoParcial);
-      }
-      if(!gatilho) continue;
+      double atual = compra ? SymbolInfoDouble(_Symbol, SYMBOL_BID)
+                            : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
 
-      // volume a fechar, normalizado ao passo da corretora
-      double fechar = vol * InpPercentualParcial / 100.0;
-      fechar = MathFloor(fechar / passo) * passo;
-      fechar = NormalizeDouble(fechar, DigitosLote());
+      // ---- niveis de gatilho das parciais ----
+      double nivel1 = (InpParciaisFibonacci && gAlvoFib1 != 0.0)
+                      ? gAlvoFib1
+                      : (compra ? ab + risco * InpGatilhoParcial : ab - risco * InpGatilhoParcial);
+      double nivel2 = (InpParciaisFibonacci && gAlvoFib2 != 0.0) ? gAlvoFib2 : 0.0;
 
-      if(fechar >= loteMin && (vol - fechar) >= loteMin)
+      bool bateu1 = compra ? (atual >= nivel1) : (atual <= nivel1);
+      bool bateu2 = (nivel2 != 0.0) && (compra ? (atual >= nivel2) : (atual <= nivel2));
+
+      // ---- PARCIAL 1 + ZERO A ZERO ----
+      if(!ParcialJaFeita(tk) && bateu1)
       {
-         if(trade.PositionClosePartial(tk, fechar))
-            PrintFormat("[PARCIAL] Ticket %I64u: fechado %.*f de %.*f no 1:1",
-                        tk, DigitosLote(), fechar, DigitosLote(), vol);
+         double perc1 = InpParciaisFibonacci ? InpPercFibParcial1 : InpPercentualParcial;
+         FecharPercentual(tk, vol, perc1, "PARCIAL 1 FIB");
+
+         if(PositionSelectByTicket(tk))
+         {
+            double novoSL = NormalizeDouble(ab, dig);
+            bool precisa = compra ? (sl < novoSL) : (sl > novoSL);
+            if(precisa && trade.PositionModify(tk, novoSL, tp))
+               PrintFormat("[ZERO A ZERO] Ticket %I64u: stop na entrada %.*f", tk, dig, novoSL);
+         }
+         MarcarParcial(tk);
+         continue;
       }
 
-      // trava o restante no zero a zero
-      if(PositionSelectByTicket(tk))
+      // ---- PARCIAL 2 (segundo nivel de Fibonacci do CD) ----
+      if(InpParciaisFibonacci && ParcialJaFeita(tk) && !Parcial2JaFeita(tk) && bateu2)
       {
-         double novoSL = NormalizeDouble(ab, dig);
-         bool precisa = (tipo == POSITION_TYPE_BUY) ? (sl < novoSL) : (sl > novoSL);
-         if(precisa && trade.PositionModify(tk, novoSL, tp))
-            PrintFormat("[ZERO A ZERO] Ticket %I64u: stop na entrada %.*f", tk, dig, novoSL);
+         FecharPercentual(tk, vol, InpPercFibParcial2, "PARCIAL 2 FIB");
+         MarcarParcial2(tk);
       }
-      MarcarParcial(tk);
    }
 }
 
@@ -1077,10 +1298,10 @@ void AtualizarPainel()
 
    int x = 12, y = 250;
 
-   Lbl("t0", x, y,      "ROBO FENIXTRADER v2.20", clrGold, 11);
+   Lbl("t0", x, y,      "ROBO FENIX HIBRIDO v3.00 (HARMONICO + ROMPIMENTO)", clrGold, 11);
    Lbl("t1", x, y - 20, "Sinal: " + EnumToString(InpTFSinal) + "  |  Grafico: " + EnumToString((ENUM_TIMEFRAMES)Period()) +
        "  |  Spread: " + (string)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) + " pts", clrSkyBlue);
-   Lbl("t2", x, y - 38, "Padrao atual: " + (gPad.valido ? gPad.nome + (gPad.compra ? " (COMPRA)" : " (VENDA)") : "procurando..."),
+   Lbl("t2", x, y - 38, "Estrategia unica FUSAO " + (InpEntradasAutomaticas ? "ON" : "OFF") + "  |  Gatilho " + (InpUsarFusao ? "ROMPIMENTO+FORCA" : "SO PADRAO") + "  |  Padrao: " + (gPad.valido ? gPad.nome + (gPad.compra ? " (COMPRA)" : " (VENDA)") : "procurando..."),
        gPad.valido ? (gPad.compra ? clrLime : clrTomato) : clrSilver);
    Lbl("t3", x, y - 56, "Saldo inicio do dia: " + DoubleToString(gSaldoInicioDia, 2), clrWhite);
    Lbl("t4", x, y - 74, "Resultado do dia: " + DoubleToString(res, 2) + "  (" + DoubleToString(pct, 2) + "%)", cRes);
@@ -1123,7 +1344,7 @@ void AbrirManual(bool compra)
       Print("[MANUAL] Limite de ", InpMaxEntradasDia, " entradas/dia atingido");
       return;
    }
-   if(PosicoesEA() >= (InpGestaoGlobal ? InpMaxPosicoesGlobal : InpMaxPosicoesAbertas))
+   if(PosicoesEA() >= InpMaxPosicoesAbertas)
    {
       Print("[MANUAL] Limite de posicoes abertas atingido");
       return;
@@ -1137,7 +1358,6 @@ void AbrirManual(bool compra)
    double rr = AlvoPorEntradaPct() / MathMax(0.01, RiscoPorEntradaPct());
    double tp = compra ? preco + dist * rr : preco - dist * rr;
    double lote = CalcularLote(dist, RiscoPorEntradaPct());
-   lote = LimitarLotePorMargem(lote, compra, preco);
    if(lote <= 0) return;
    AjustarStops(compra, preco, sl, tp);
    bool ok;
@@ -1145,6 +1365,174 @@ void AbrirManual(bool compra)
    else       ok = trade.Sell(lote, _Symbol, 0.0, sl, tp, "MANUAL SELL");
    if(ok) gEntradasHoje++;
    else   Print("[ERRO] Manual falhou: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
+}
+
+//=============== ESTRATEGIA 2: ROMPIMENTO DE RANGE (ORB) ===========
+// Logica herdada do Robo Fenix XAUUSD v7.8: rompimento confirmado pelo
+// fechamento da vela do timeframe do sinal, com corpo forte e filtro EMA.
+int VerificarSinalORB()
+{
+   if(!InpUsarORB) return 0;
+
+   double maiorHigh = iHigh(_Symbol, InpTFSinalORB, 2);
+   double menorLow  = iLow (_Symbol, InpTFSinalORB, 2);
+   for(int i = 3; i <= InpORBLookback + 2; i++)
+   {
+      double h = iHigh(_Symbol, InpTFSinalORB, i);
+      double l = iLow (_Symbol, InpTFSinalORB, i);
+      if(h > maiorHigh) maiorHigh = h;
+      if(l < menorLow)  menorLow  = l;
+   }
+   double range = maiorHigh - menorLow;
+   if(range <= 0) return 0;
+
+   double open1  = iOpen (_Symbol, InpTFSinalORB, 1);
+   double close1 = iClose(_Symbol, InpTFSinalORB, 1);
+   double high1  = iHigh (_Symbol, InpTFSinalORB, 1);
+   double low1   = iLow  (_Symbol, InpTFSinalORB, 1);
+   double amp = high1 - low1;
+   if(amp <= 0) return 0;
+
+   double forca = MathAbs(close1 - open1) / amp;
+   if(forca < InpORBForcaCorpoMin) return 0;
+
+   double margem = range * InpORBFatorRompimento;
+   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+
+   if(close1 > maiorHigh + margem && close1 > open1 && bid > maiorHigh) return 1;
+   if(close1 < menorLow  - margem && close1 < open1 && bid < menorLow)  return -1;
+   return 0;
+}
+
+bool FiltroEMAOrb(int sinal)
+{
+   if(!InpORBFiltroEMA) return true;
+   if(hEMA_ORB == INVALID_HANDLE) return true;
+   double buf[];
+   ArraySetAsSeries(buf, true);
+   if(CopyBuffer(hEMA_ORB, 0, 0, 2, buf) < 2) return false;
+   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   if(sinal == 1  && bid < buf[0]) return false;
+   if(sinal == -1 && bid > buf[0]) return false;
+   return true;
+}
+
+//=============== FUSAO: CONFIRMACAO DE FORCA + ROMPIMENTO =========
+// O padrao harmonico define ONDE operar (ponto D). O motor de rompimento
+// define QUANDO: a vela precisa ter corpo forte na direcao do padrao e
+// romper o micro-range das ultimas barras. Uma estrategia unica, cruzando
+// as duas leituras.
+bool ConfirmacaoFusao(bool compra)
+{
+   if(!InpUsarFusao) return true;
+
+   double open1  = iOpen (_Symbol, InpTFSinal, 1);
+   double close1 = iClose(_Symbol, InpTFSinal, 1);
+   double high1  = iHigh (_Symbol, InpTFSinal, 1);
+   double low1   = iLow  (_Symbol, InpTFSinal, 1);
+   double faixa  = high1 - low1;
+   if(faixa <= 0) return false;
+
+   double forca = MathAbs(close1 - open1) / faixa;
+   bool direcao = compra ? (close1 > open1) : (close1 < open1);
+   if(!direcao || forca < InpFusaoCorpoMin)
+   {
+      if(InpLogDiagnostico)
+         PrintFormat("[FUSAO] Aguardando forca: corpo %.2f (minimo %.2f) direcao %s",
+                     forca, InpFusaoCorpoMin, (direcao ? "ok" : "contraria"));
+      return false;
+   }
+
+   if(InpFusaoExigirRompimento)
+   {
+      int n = MathMax(1, InpFusaoLookback);
+      double maiorHigh = iHigh(_Symbol, InpTFSinal, 2);
+      double menorLow  = iLow (_Symbol, InpTFSinal, 2);
+      for(int i = 3; i <= n + 2; i++)
+      {
+         double h = iHigh(_Symbol, InpTFSinal, i);
+         double l = iLow (_Symbol, InpTFSinal, i);
+         if(h > maiorHigh) maiorHigh = h;
+         if(l < menorLow)  menorLow  = l;
+      }
+      if(compra && close1 <= maiorHigh)
+      {
+         if(InpLogDiagnostico) Print("[FUSAO] Aguardando rompimento do micro-range para compra.");
+         return false;
+      }
+      if(!compra && close1 >= menorLow)
+      {
+         if(InpLogDiagnostico) Print("[FUSAO] Aguardando rompimento do micro-range para venda.");
+         return false;
+      }
+   }
+
+   if(InpFusaoFiltroEMA && hEMA_FUS != INVALID_HANDLE)
+   {
+      double buf[];
+      ArraySetAsSeries(buf, true);
+      if(CopyBuffer(hEMA_FUS, 0, 0, 2, buf) < 2) return false;
+      double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      if(compra  && bid < buf[0]) return false;
+      if(!compra && bid > buf[0]) return false;
+   }
+
+   return true;
+}
+
+void TentarEntradaORB()
+{
+   if(!InpUsarORB || !InpEntradasAutomaticas) return;
+   if(gBloqueadoDia) return;
+   if(gEntradasHoje >= InpMaxEntradasDia) return;
+   if(PosicoesEA() >= InpMaxPosicoesAbertas) return;
+   if(InpPrioridadeHarmonico && gPad.valido && gPad.tD != gSinalOperadoTD) return;
+
+   // uma tentativa por vela do timeframe do rompimento
+   datetime barra = iTime(_Symbol, InpTFSinalORB, 0);
+   if(barra == gUltimaBarraORB) return;
+
+   int sinal = VerificarSinalORB();
+   if(sinal == 0) return;
+   if(!FiltroEMAOrb(sinal)) return;
+   if(!SpreadOk()) return;
+
+   gUltimaBarraORB = barra;
+
+   bool compra = (sinal == 1);
+   double atr = ATRVal();
+   double dist = (atr > 0 ? atr * InpORBStopATRMult : 200 * _Point);
+   double preco = compra ? SymbolInfoDouble(_Symbol, SYMBOL_ASK)
+                         : SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double sl = compra ? preco - dist : preco + dist;
+
+   double riscoPct = RiscoPorEntradaPct();
+   double rr = AlvoPorEntradaPct() / MathMax(0.01, riscoPct);
+   double tp = compra ? preco + dist * rr : preco - dist * rr;
+
+   AjustarStops(compra, preco, sl, tp);
+   dist = MathAbs(preco - sl);
+   double lote = CalcularLote(dist, riscoPct);
+   if(lote <= 0) return;
+
+   int dig = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+   string com = "ROMPIMENTO " + (compra ? "BUY" : "SELL");
+   bool enviado = compra ? trade.Buy (lote, _Symbol, 0.0, sl, tp, com)
+                         : trade.Sell(lote, _Symbol, 0.0, sl, tp, com);
+   uint ret = trade.ResultRetcode();
+   if(enviado && (ret == TRADE_RETCODE_DONE || ret == TRADE_RETCODE_DONE_PARTIAL || ret == TRADE_RETCODE_PLACED))
+   {
+      gEntradasHoje++;
+      gUltimoSinalTexto = "ROMPIMENTO " + (compra ? "COMPRA" : "VENDA");
+      PrintFormat("[ENTRADA ROMPIMENTO %d/%d] %s | lote=%.*f SL=%.*f TP=%.*f risco=%.2f%%",
+                  gEntradasHoje, InpMaxEntradasDia, compra ? "COMPRA" : "VENDA",
+                  DigitosLote(), lote, dig, sl, dig, tp, riscoPct);
+      Alert("ENTRADA POR ROMPIMENTO: ", compra ? "COMPRA" : "VENDA", " | ", _Symbol);
+   }
+   else
+   {
+      PrintFormat("[ERRO ORDEM ROMPIMENTO] retcode=%u | %s", ret, trade.ResultRetcodeDescription());
+   }
 }
 
 //======================= EVENTOS ===================================
@@ -1161,12 +1549,30 @@ int OnInit()
       return INIT_FAILED;
    }
 
+   if(InpGatilhoCirurgico && InpUsarRSIDiv)
+   {
+      hRSI = iRSI(_Symbol, InpTFGatilho, InpRSIPeriodo, PRICE_CLOSE);
+      if(hRSI == INVALID_HANDLE)
+         Print("[AVISO] RSI do gatilho nao criado - confirmacao de divergencia sera ignorada");
+   }
+
+   if(InpUsarFusao && InpFusaoFiltroEMA)
+   {
+      hEMA_FUS = iMA(_Symbol, InpTFSinal, InpFusaoEmaPeriodo, 0, MODE_EMA, PRICE_CLOSE);
+   }
+   if(InpUsarORB && InpORBFiltroEMA)
+   {
+      hEMA_ORB = iMA(_Symbol, InpTFSinalORB, InpORBEmaPeriodo, 0, MODE_EMA, PRICE_CLOSE);
+      if(hEMA_ORB == INVALID_HANDLE)
+         Print("[AVISO] EMA do rompimento nao criada - filtro sera ignorado");
+   }
+
    gDiaAtual = -1;
    AtualizarDia();
    DetectarPadroes();
    DesenharPadrao();
    AtualizarPainel();
-   Print("Robo FenixTrader v2.20 iniciado | AUTO ", (InpEntradasAutomaticas ? "LIGADO" : "DESLIGADO"),
+   Print("Robo Fenix v4.00 - Precisao Cirurgica no Ponto D | AUTO ", (InpEntradasAutomaticas ? "LIGADO" : "DESLIGADO"),
           " | Entrada no D ", (InpEntrarAoFecharFigura ? "LIGADA" : "DESLIGADA"), " | Stop diario ", InpStopDiarioPct,
          "% | Meta diaria ", InpAlvoDiarioPct, "% | Entradas/dia ", InpMaxEntradasDia,
          " | Breakeven ", (InpMoverBreakeven ? "ON" : "OFF"));
@@ -1177,6 +1583,9 @@ void OnDeinit(const int reason)
 {
    ObjectsDeleteAll(0, PFX);
    if(hATR != INVALID_HANDLE) IndicatorRelease(hATR);
+   if(hEMA_ORB != INVALID_HANDLE) IndicatorRelease(hEMA_ORB);
+   if(hEMA_FUS != INVALID_HANDLE) IndicatorRelease(hEMA_FUS);
+   if(hRSI != INVALID_HANDLE) IndicatorRelease(hRSI);
    ChartRedraw();
 }
 
@@ -1187,19 +1596,20 @@ void OnTick()
 
    // Reavalia as figuras continuamente (nao espera a vela fechar), assim o
    // ponto D e reconhecido no instante do sinal e a ordem sai na hora.
+   // v3.20: as figuras sao recalculadas SOMENTE quando uma vela do timeframe
+   // do sinal fecha. Assim o ponto D fica travado e nao muda de lugar a cada
+   // tick / a cada movimento da vela em formacao.
    datetime barra = iTime(_Symbol, InpTFSinal, 0);
-   datetime agora = TimeCurrent();
    bool novaBarra = (barra != gUltimaBarraSinal);
-   bool naHora    = (InpScanSegundos <= 0) || (agora - gUltimoScan >= InpScanSegundos);
-   if(novaBarra || naHora)
+   if(novaBarra)
    {
       gUltimaBarraSinal = barra;
-      gUltimoScan       = agora;
-      DetectarPadroes();            // sempre procura e desenha as figuras
+      gUltimoScan       = TimeCurrent();
+      DetectarPadroes();            // procura e desenha as figuras (vela fechada)
       DesenharPadrao();
-      TentarEntrada();              // entra imediatamente ao detectar o ponto D
+      TentarEntrada();              // entrada no ponto D confirmado
    }
-   TentarEntrada();                 // rede de seguranca (respeita PRZ e limites)
+   TentarEntradaORB();              // so roda se InpUsarORB for ligado manualmente
    GerenciarParcial();              // parcial no 1:1 + stop no zero a zero
    GerenciarBreakeven();            // protege posicoes que andaram a favor
    AtualizarPainel();
