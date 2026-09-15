@@ -42,11 +42,11 @@ function Index() {
             </div>
             <div className="mt-12 flex justify-center">
               <a
-                href="/downloads/Robo_Fenix_Ponto_D.mq5"
-                download="Robo_Fenix_Ponto_D.mq5"
+                href="/downloads/Robo_Fenix_Ponto_D.zip"
+                download="Robo_Fenix_Ponto_D.zip"
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 to-amber-600 text-[#030712] px-10 py-7 font-extrabold text-xl shadow-2xl shadow-amber-500/20 hover:shadow-amber-400/40 transition-all hover:-translate-y-1 hover:scale-[1.02] h-auto cursor-pointer"
               >
-                <Download className="h-6 w-6" /> Baixar Ferramenta
+                <Download className="h-6 w-6" /> Baixar Robô Fênix Ponto D
               </a>
             </div>
 
