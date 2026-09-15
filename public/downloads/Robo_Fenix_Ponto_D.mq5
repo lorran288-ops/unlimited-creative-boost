@@ -32,6 +32,15 @@
 //|  - Botoes manuais agora respeitam bloqueio e limite de entradas   |
 //|  - Precisao do lote calculada pelo SYMBOL_VOLUME_STEP             |
 //+------------------------------------------------------------------+
+//| v4.50 - FUSAO UNICA: HARMONICO (PONTO D) + ROMPIMENTO/FORCA      |
+//|  - Um robo unico: a figura harmonica define ONDE (ponto D) e a   |
+//|    leitura de rompimento/forca define QUANDO (confirmacao)       |
+//|  - Entrada exatamente no ponto D, no fechamento da vela do sinal |
+//|  - Gestao: 0.10% de perda e 0.20% de alvo por operacao           |
+//|  - Dia: stop 0.20% | meta 0.40% | 2 entradas | 1 posicao         |
+//|  - Sem parcial e sem zero a zero: trade normal ate alvo ou stop  |
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
 //| v3.20 - FIGURA TRAVADA E FIBONACCI ESTRITO                        |
 //|  - O ponto D NUNCA usa a vela em formacao: so pivo confirmado     |
 //|  - Deteccao roda apenas quando fecha a vela do timeframe do sinal |
@@ -86,14 +95,14 @@ input double InpCorpoMinimo             = 0.30;        // Forca minima do corpo 
 input double InpDistanciaPRZ            = 2.0;         // Distancia maxima do preco ao ponto D (x ATR)
 
 input group "=== GESTAO DIARIA (percentual do saldo) ==="
-input double InpStopDiarioPct           = 1.0;         // Stop maximo diario (%)
-input double InpAlvoDiarioPct           = 2.0;         // Alvo maximo diario (%)
-input int    InpMaxEntradasDia          = 3;           // Maximo de entradas por dia (1 a 3)
+input double InpStopDiarioPct           = 0.20;         // Stop maximo diario (%)
+input double InpAlvoDiarioPct           = 0.40;         // Alvo maximo diario (%)
+input int    InpMaxEntradasDia          = 2;           // Maximo de entradas por dia (1 a 3)
 input int    InpMaxPosicoesAbertas      = 1;           // Maximo de posicoes abertas ao mesmo tempo
 input double InpRRMinimo                = 1.2;         // Razao risco/retorno minima aceita
 input bool   InpUsarRiscoFixo           = true;        // Usar risco/alvo fixos por operacao (abaixo)
-input double InpRiscoPorEntradaPct      = 1.00;        // Stop por operacao (% do saldo)
-input double InpAlvoPorEntradaPct       = 2.00;        // Take profit por operacao (% do saldo)
+input double InpRiscoPorEntradaPct      = 0.10;        // Stop por operacao (% do saldo)
+input double InpAlvoPorEntradaPct       = 0.20;        // Take profit por operacao (% do saldo)
 
 input group "=== EXECUCAO ==="
 input double InpFolgaStopATR            = 0.5;         // Folga do stop (x ATR) alem do ponto X
@@ -141,7 +150,7 @@ input double InpORBStopATRMult          = 1.5;         // Stop do rompimento (x 
 input bool   InpPrioridadeHarmonico     = true;        // Harmonico tem prioridade sobre o rompimento
 
 input group "=== FUSAO: HARMONICO CONFIRMADO POR FORCA/ROMPIMENTO ==="
-input bool   InpUsarFusao                = false;        // Exigir confirmacao de forca/rompimento no ponto D
+input bool   InpUsarFusao                = true;        // Exigir confirmacao de forca/rompimento no ponto D
 input double InpFusaoCorpoMin            = 0.45;        // Forca minima do corpo da vela de confirmacao (0-1)
 input int    InpFusaoLookback            = 3;           // Barras do micro-range para o rompimento de gatilho
 input bool   InpFusaoExigirRompimento    = true;        // Exigir rompimento do micro-range na direcao do padrao
