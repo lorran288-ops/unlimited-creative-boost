@@ -92,8 +92,8 @@ input int    InpMaxEntradasDia          = 3;           // Maximo de entradas por
 input int    InpMaxPosicoesAbertas      = 1;           // Maximo de posicoes abertas ao mesmo tempo
 input double InpRRMinimo                = 1.2;         // Razao risco/retorno minima aceita
 input bool   InpUsarRiscoFixo           = true;        // Usar risco/alvo fixos por operacao (abaixo)
-input double InpRiscoPorEntradaPct      = 0.33;        // Stop por operacao (% do saldo)
-input double InpAlvoPorEntradaPct       = 0.66;        // Take profit por operacao (% do saldo)
+input double InpRiscoPorEntradaPct      = 1.00;        // Stop por operacao (% do saldo)
+input double InpAlvoPorEntradaPct       = 2.00;        // Take profit por operacao (% do saldo)
 
 input group "=== EXECUCAO ==="
 input double InpFolgaStopATR            = 0.5;         // Folga do stop (x ATR) alem do ponto X
@@ -104,10 +104,10 @@ input bool   InpFecharTudoNaMeta        = true;        // Fechar posicoes ao bat
 input bool   InpUsarSpreadMaximo        = true;        // Bloquear entrada com spread alto
 input int    InpSpreadMaximoPontos      = 50;          // Spread maximo permitido (pontos)
 input bool   InpPularEntradaLoteMinimo  = true;        // Nao entrar se o lote de risco < lote minimo
-input bool   InpMoverBreakeven          = true;        // Mover stop para o breakeven
+input bool   InpMoverBreakeven          = false;        // Mover stop para o breakeven
 input double InpGatilhoBE               = 1.0;         // Gatilho do BE (x risco inicial a favor)
 input double InpOffsetBE                = 0.1;         // Folga do BE alem da entrada (x risco)
-input bool   InpSaidaParcial            = true;        // Realizar parcial e travar no zero a zero
+input bool   InpSaidaParcial            = false;        // Realizar parcial e travar no zero a zero
 input double InpGatilhoParcial          = 1.0;         // Gatilho da parcial (x risco a favor)
 input double InpPercentualParcial       = 50.0;        // Quanto fechar na parcial (% do volume)
 
@@ -166,7 +166,7 @@ input double InpVolFator                  = 1.20;        // Volume da vela do D 
 
 input group "=== ALVOS DINAMICOS (RR 1:2 + PARCIAIS FIBONACCI) ==="
 input double InpRRObrigatorio             = 1.5;         // Risco/Retorno minimo obrigatorio do alvo final
-input bool   InpParciaisFibonacci         = true;        // Fracionar parciais nos Fibos do impulso CD
+input bool   InpParciaisFibonacci         = false;        // Fracionar parciais nos Fibos do impulso CD
 input double InpFibParcial1               = 61.8;        // Nivel 1 do impulso CD (%) - parcial 1
 input double InpFibParcial2               = 100.0;        // Nivel 2 do impulso CD (%) - parcial 2
 input double InpPercFibParcial1           = 30.0;        // Volume fechado na parcial 1 (%)
