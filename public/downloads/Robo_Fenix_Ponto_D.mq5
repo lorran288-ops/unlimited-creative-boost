@@ -62,7 +62,7 @@
 //|  do pin bar, RSI e volume) e "InpTolerancia" nos harmonicos.      |
 //+------------------------------------------------------------------+
 #property copyright "Robo Gartley Harmonico"
-#property version   "4.20"
+#property version   "4.30"
 
 #include <Trade\Trade.mqh>
 
@@ -70,11 +70,11 @@
 input group "=== PADROES HARMONICOS ==="
 input ENUM_TIMEFRAMES InpTFSinal        = PERIOD_H1;  // Timeframe do sinal (padrao)
 input int    InpFractalDepth            = 2;           // Profundidade do pivo (velas de cada lado)
-input int    InpBarrasBusca             = 600;         // Barras analisadas para achar XABCD
-input double InpTolerancia              = 0.05;        // Tolerancia dos niveis Fibonacci (estrito 0.05)
-input int    InpMaxPivos                = 40;          // Quantidade de pivos analisados
-input bool   InpUsarFiltroCD            = true;        // Exigir projecao CD dentro da faixa Fibonacci
-input bool   InpAceitarGenerico         = false;       // Aceitar padrao harmonico generico (ABCD)
+input int    InpBarrasBusca             = 1000;         // Barras analisadas para achar XABCD
+input double InpTolerancia              = 0.12;        // Tolerancia dos niveis Fibonacci (estrito 0.05)
+input int    InpMaxPivos                = 60;          // Quantidade de pivos analisados
+input bool   InpUsarFiltroCD            = false;        // Exigir projecao CD dentro da faixa Fibonacci
+input bool   InpAceitarGenerico         = true;       // Aceitar padrao harmonico generico (ABCD)
 input bool   InpLogDiagnostico          = true;        // Imprimir diagnostico no Especialistas
 input bool   InpUsarGartley             = true;        // Gartley (B 0.618 | D 0.786)
 input bool   InpUsarMorcego             = true;        // Morcego (B 0.382-0.50 | D 0.886)
@@ -88,12 +88,12 @@ input double InpDistanciaPRZ            = 2.0;         // Distancia maxima do pr
 input group "=== GESTAO DIARIA (percentual do saldo) ==="
 input double InpStopDiarioPct           = 1.0;         // Stop maximo diario (%)
 input double InpAlvoDiarioPct           = 2.0;         // Alvo maximo diario (%)
-input int    InpMaxEntradasDia          = 2;           // Maximo de entradas por dia (1 a 3)
+input int    InpMaxEntradasDia          = 3;           // Maximo de entradas por dia (1 a 3)
 input int    InpMaxPosicoesAbertas      = 1;           // Maximo de posicoes abertas ao mesmo tempo
 input double InpRRMinimo                = 1.2;         // Razao risco/retorno minima aceita
 input bool   InpUsarRiscoFixo           = true;        // Usar risco/alvo fixos por operacao (abaixo)
-input double InpRiscoPorEntradaPct      = 0.50;        // Stop por operacao (% do saldo)
-input double InpAlvoPorEntradaPct       = 1.00;        // Take profit por operacao (% do saldo)
+input double InpRiscoPorEntradaPct      = 0.33;        // Stop por operacao (% do saldo)
+input double InpAlvoPorEntradaPct       = 0.66;        // Take profit por operacao (% do saldo)
 
 input group "=== EXECUCAO ==="
 input double InpFolgaStopATR            = 0.5;         // Folga do stop (x ATR) alem do ponto X
@@ -141,7 +141,7 @@ input double InpORBStopATRMult          = 1.5;         // Stop do rompimento (x 
 input bool   InpPrioridadeHarmonico     = true;        // Harmonico tem prioridade sobre o rompimento
 
 input group "=== FUSAO: HARMONICO CONFIRMADO POR FORCA/ROMPIMENTO ==="
-input bool   InpUsarFusao                = true;        // Exigir confirmacao de forca/rompimento no ponto D
+input bool   InpUsarFusao                = false;        // Exigir confirmacao de forca/rompimento no ponto D
 input double InpFusaoCorpoMin            = 0.45;        // Forca minima do corpo da vela de confirmacao (0-1)
 input int    InpFusaoLookback            = 3;           // Barras do micro-range para o rompimento de gatilho
 input bool   InpFusaoExigirRompimento    = true;        // Exigir rompimento do micro-range na direcao do padrao
@@ -151,7 +151,7 @@ input int    InpFusaoEmaPeriodo          = 50;          // Periodo da EMA rapida
 input group "=== GATILHO CIRURGICO NO PONTO D ==="
 // ---- AJUSTE DE SENSIBILIDADE POR ATIVO: comece por estes parametros ----
 input bool   InpGatilhoCirurgico          = true;        // Exigir gatilho cirurgico no ponto D
-input double InpMaxDistPRZ_ATR            = 0.60;        // Distancia MAXIMA do preco ao ponto D (x ATR) - menor = mais cirurgico
+input double InpMaxDistPRZ_ATR            = 1.50;        // Distancia MAXIMA do preco ao ponto D (x ATR) - menor = mais cirurgico
 input int    InpMinConfirmacoes           = 1;           // Confirmacoes minimas exigidas (1 a 3)
 input bool   InpUsarPinBar                = true;        // Confirmacao 1: rejeicao de preco (pin bar) na zona
 input double InpPinBarPavioMin            = 0.50;        // Pavio de rejeicao minimo (fracao do range da vela)
@@ -165,7 +165,7 @@ input int    InpVolMedia                  = 20;          // Barras da media de v
 input double InpVolFator                  = 1.20;        // Volume da vela do D / media (climax)
 
 input group "=== ALVOS DINAMICOS (RR 1:2 + PARCIAIS FIBONACCI) ==="
-input double InpRRObrigatorio             = 2.0;         // Risco/Retorno minimo obrigatorio do alvo final
+input double InpRRObrigatorio             = 1.5;         // Risco/Retorno minimo obrigatorio do alvo final
 input bool   InpParciaisFibonacci         = true;        // Fracionar parciais nos Fibos do impulso CD
 input double InpFibParcial1               = 61.8;        // Nivel 1 do impulso CD (%) - parcial 1
 input double InpFibParcial2               = 100.0;        // Nivel 2 do impulso CD (%) - parcial 2
