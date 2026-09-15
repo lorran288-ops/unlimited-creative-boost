@@ -41,20 +41,15 @@ function Index() {
               </div>
             </div>
             <div className="mt-12 flex justify-center">
-              <button
-                onClick={() => {
-                  const link = document.createElement("a");
-                  link.href = "/downloads/Robo_Fenix_Ponto_D.mq5";
-                  link.download = "Robo_Fenix_Ponto_D.mq5";
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
+              <a
+                href="/downloads/Robo_Fenix_Ponto_D.mq5"
+                download="Robo_Fenix_Ponto_D.mq5"
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 to-amber-600 text-[#030712] px-10 py-7 font-extrabold text-xl shadow-2xl shadow-amber-500/20 hover:shadow-amber-400/40 transition-all hover:-translate-y-1 hover:scale-[1.02] h-auto cursor-pointer"
               >
                 <Download className="h-6 w-6" /> Baixar Ferramenta
-              </button>
+              </a>
             </div>
+
           </div>
         </section>
 
