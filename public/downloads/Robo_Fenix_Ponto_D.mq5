@@ -62,13 +62,13 @@
 //|  do pin bar, RSI e volume) e "InpTolerancia" nos harmonicos.      |
 //+------------------------------------------------------------------+
 #property copyright "Robo Gartley Harmonico"
-#property version   "4.00"
+#property version   "4.20"
 
 #include <Trade\Trade.mqh>
 
 //======================= ENTRADAS ==================================
 input group "=== PADROES HARMONICOS ==="
-input ENUM_TIMEFRAMES InpTFSinal        = PERIOD_M30;  // Timeframe do sinal (padrao)
+input ENUM_TIMEFRAMES InpTFSinal        = PERIOD_H1;  // Timeframe do sinal (padrao)
 input int    InpFractalDepth            = 2;           // Profundidade do pivo (velas de cada lado)
 input int    InpBarrasBusca             = 600;         // Barras analisadas para achar XABCD
 input double InpTolerancia              = 0.05;        // Tolerancia dos niveis Fibonacci (estrito 0.05)
@@ -131,7 +131,7 @@ input int    InpScanSegundos            = 0;           // (nao usado na v3.20: a
 
 input group "=== ROMPIMENTO COMO ESTRATEGIA SEPARADA (DESLIGADO NA v3.10) ==="
 input bool   InpUsarORB                 = false;       // DESLIGADO: o rompimento agora e apenas confirmacao (fusao)
-input ENUM_TIMEFRAMES InpTFSinalORB     = PERIOD_M30;  // Timeframe do sinal de rompimento
+input ENUM_TIMEFRAMES InpTFSinalORB     = PERIOD_H1;  // Timeframe do sinal de rompimento
 input int    InpORBLookback             = 6;           // Barras do range analisado
 input double InpORBFatorRompimento      = 0.15;        // Margem minima de rompimento (% do range)
 input double InpORBForcaCorpoMin        = 0.65;        // Forca minima do corpo da vela (0-1)
@@ -167,9 +167,9 @@ input double InpVolFator                  = 1.20;        // Volume da vela do D 
 input group "=== ALVOS DINAMICOS (RR 1:2 + PARCIAIS FIBONACCI) ==="
 input double InpRRObrigatorio             = 2.0;         // Risco/Retorno minimo obrigatorio do alvo final
 input bool   InpParciaisFibonacci         = true;        // Fracionar parciais nos Fibos do impulso CD
-input double InpFibParcial1               = 38.2;        // Nivel 1 do impulso CD (%) - parcial 1
-input double InpFibParcial2               = 61.8;        // Nivel 2 do impulso CD (%) - parcial 2
-input double InpPercFibParcial1           = 40.0;        // Volume fechado na parcial 1 (%)
+input double InpFibParcial1               = 61.8;        // Nivel 1 do impulso CD (%) - parcial 1
+input double InpFibParcial2               = 100.0;        // Nivel 2 do impulso CD (%) - parcial 2
+input double InpPercFibParcial1           = 30.0;        // Volume fechado na parcial 1 (%)
 input double InpPercFibParcial2           = 30.0;        // Volume fechado na parcial 2 (%)
 
 //======================= GLOBAIS ===================================
