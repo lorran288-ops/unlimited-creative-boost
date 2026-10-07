@@ -77,7 +77,7 @@ export function StrategyChart() {
               },
               {
                 label: "Gestão Diária",
-                desc: "Stop 2.1% · Meta 4.2% · Máximo 3 posições globais · Risco 0.70%/entrada.",
+                desc: "Stop $25 (0.025%) · Meta $50 (0.05%) · Banca $100.000 · Risco $8,33 (0.0083%)/entrada.",
                 icon: <ShieldCheck className="w-5 h-5 text-emerald-400" />,
                 meta: "SOMA 3 ATIVOS",
               },
