@@ -108,7 +108,7 @@ input double InpRiscoPorEntradaPct      = 0.10;        // Stop por operacao (% d
 input double InpAlvoPorEntradaPct       = 0.20;        // Take profit por operacao (% do saldo)
 
 input group "=== EXECUCAO ==="
-input double InpFolgaStopATR            = 0.5;         // Folga do stop (x ATR) alem do ponto X
+input double InpFolgaStopATR            = 0.7;         // Folga do stop (x ATR) alem do ponto X
 input int    InpATRPeriodo              = 14;          // Periodo do ATR
 input int    InpSlippage                = 30;          // Desvio maximo (pontos)
 input ulong  InpMagic                   = 20260902;    // Numero magico
@@ -154,7 +154,7 @@ input bool   InpPrioridadeHarmonico     = true;        // Harmonico tem priorida
 
 input group "=== FUSAO: HARMONICO CONFIRMADO POR FORCA/ROMPIMENTO ==="
 input bool   InpUsarFusao                = true;        // Exigir confirmacao de forca/rompimento no ponto D
-input double InpFusaoCorpoMin            = 0.45;        // Forca minima do corpo da vela de confirmacao (0-1)
+input double InpFusaoCorpoMin            = 0.55;        // Forca minima do corpo da vela de confirmacao (0-1)
 input int    InpFusaoLookback            = 3;           // Barras do micro-range para o rompimento de gatilho
 input bool   InpFusaoExigirRompimento    = true;        // Exigir rompimento do micro-range na direcao do padrao
 input bool   InpFusaoFiltroEMA           = false;       // Exigir preco a favor da EMA rapida
@@ -175,6 +175,19 @@ input int    InpDivLookback               = 12;          // Barras analisadas na
 input bool   InpUsarExaustaoVolume        = true;        // Confirmacao 3: exaustao de volume/fluxo
 input int    InpVolMedia                  = 20;          // Barras da media de volume
 input double InpVolFator                  = 1.20;        // Volume da vela do D / media (climax)
+
+input group "=== v4.7 FILTRO DE ALTA ASSERTIVIDADE ==="
+input bool   InpFiltroQualidade           = true;        // Liga os filtros de qualidade abaixo
+input bool   InpUsarRSIExtremo            = true;        // Exigir RSI H1 esticado no D (exaustao real)
+input double InpRSICompraMax              = 40.0;        // Compra so com RSI do sinal abaixo de
+input double InpRSIVendaMin               = 60.0;        // Venda so com RSI do sinal acima de
+input bool   InpUsarFiltroADX             = true;        // Bloquear reversao contra tendencia forte
+input int    InpADXPeriodo                = 14;          // Periodo do ADX
+input double InpADXMax                    = 32.0;        // ADX maximo (acima = tendencia forte, harmonico falha)
+input bool   InpUsarFiltroHorario         = true;        // Operar so no horario de liquidez
+input int    InpHoraInicio                = 8;           // Hora inicial (horario do servidor)
+input int    InpHoraFim                   = 20;          // Hora final (horario do servidor)
+input bool   InpBloquearSexta             = true;        // Nao abrir entradas na sexta apos 16h
 
 input group "=== ALVOS DINAMICOS (RR 1:2 + PARCIAIS FIBONACCI) ==="
 input double InpRRObrigatorio             = 1.5;         // Risco/Retorno minimo obrigatorio do alvo final
@@ -204,6 +217,8 @@ string   PFX = "GH_";
 
 //--- v4.00: handles e memoria dos alvos parciais Fibonacci
 int      hRSI = INVALID_HANDLE;
+int      hRSI_SIN = INVALID_HANDLE;
+int      hADX = INVALID_HANDLE;
 double   gAlvoFib1 = 0.0;      // nivel 38.2% do impulso CD (parcial 1)
 double   gAlvoFib2 = 0.0;      // nivel 61.8% do impulso CD (parcial 2)
 
@@ -702,6 +717,9 @@ bool GatilhoCirurgicoOk(const Harmonico &p)
       return false;
    }
 
+   // 1b) v4.7 - FILTRO DE ALTA ASSERTIVIDADE
+   if(InpFiltroQualidade && !FiltroQualidade(p)) return false;
+
    // 2) confirmacoes independentes
    int    conf   = 0;
    string quais  = "";
@@ -721,6 +739,51 @@ bool GatilhoCirurgicoOk(const Harmonico &p)
    if(InpLogDiagnostico)
       PrintFormat("[GATILHO] %s VALIDADO no ponto D com %d confirmacao(oes): %s",
                   p.nome, conf, quais);
+   return true;
+}
+
+// ===================================================================
+// v4.7 FILTRO DE ALTA ASSERTIVIDADE
+// Harmonicos perdem principalmente em 3 situacoes:
+//  a) o D chega sem exaustao (RSI neutro) -> preco atravessa o D;
+//  b) mercado em tendencia forte (ADX alto) -> a reversao nao acontece;
+//  c) horario sem liquidez (madrugada/rollover/sexta tarde) -> violino.
+// Este filtro descarta essas entradas antes do gatilho.
+// ===================================================================
+bool FiltroQualidade(const Harmonico &p)
+{
+   MqlDateTime t; TimeToStruct(TimeCurrent(), t);
+   if(InpUsarFiltroHorario)
+   {
+      bool ok = (InpHoraInicio <= InpHoraFim) ? (t.hour >= InpHoraInicio && t.hour < InpHoraFim)
+                                              : (t.hour >= InpHoraInicio || t.hour < InpHoraFim);
+      if(!ok) { if(InpLogDiagnostico) PrintFormat("[FILTRO] %s fora do horario de liquidez", p.nome); return false; }
+   }
+   if(InpBloquearSexta && t.day_of_week == 5 && t.hour >= 16)
+   { if(InpLogDiagnostico) Print("[FILTRO] sexta apos 16h - entrada bloqueada"); return false; }
+
+   if(InpUsarRSIExtremo && hRSI_SIN != INVALID_HANDLE)
+   {
+      double r[]; ArraySetAsSeries(r, true);
+      if(CopyBuffer(hRSI_SIN, 0, 1, 3, r) == 3)
+      {
+         double ext = p.compra ? MathMin(r[0], MathMin(r[1], r[2])) : MathMax(r[0], MathMax(r[1], r[2]));
+         if(p.compra && ext > InpRSICompraMax)
+         { if(InpLogDiagnostico) PrintFormat("[FILTRO] %s compra sem exaustao (RSI %.1f)", p.nome, ext); return false; }
+         if(!p.compra && ext < InpRSIVendaMin)
+         { if(InpLogDiagnostico) PrintFormat("[FILTRO] %s venda sem exaustao (RSI %.1f)", p.nome, ext); return false; }
+      }
+   }
+   if(InpUsarFiltroADX && hADX != INVALID_HANDLE)
+   {
+      double a[], dp[], dm[]; ArraySetAsSeries(a, true); ArraySetAsSeries(dp, true); ArraySetAsSeries(dm, true);
+      if(CopyBuffer(hADX, 0, 1, 1, a) == 1 && CopyBuffer(hADX, 1, 1, 1, dp) == 1 && CopyBuffer(hADX, 2, 1, 1, dm) == 1)
+      {
+         bool contra = p.compra ? (dm[0] > dp[0]) : (dp[0] > dm[0]);
+         if(a[0] > InpADXMax && contra)
+         { if(InpLogDiagnostico) PrintFormat("[FILTRO] %s contra tendencia forte (ADX %.1f)", p.nome, a[0]); return false; }
+      }
+   }
    return true;
 }
 
@@ -1594,6 +1657,9 @@ int OnInit()
       if(hRSI == INVALID_HANDLE)
          Print("[AVISO] RSI do gatilho nao criado - confirmacao de divergencia sera ignorada");
    }
+
+   hRSI_SIN = iRSI(_Symbol, InpTFSinal, InpRSIPeriodo, PRICE_CLOSE);
+   hADX     = iADX(_Symbol, InpTFSinal, InpADXPeriodo);
 
    if(InpUsarFusao && InpFusaoFiltroEMA)
    {
