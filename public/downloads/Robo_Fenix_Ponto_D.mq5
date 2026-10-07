@@ -95,8 +95,11 @@ input double InpCorpoMinimo             = 0.30;        // Forca minima do corpo 
 input double InpDistanciaPRZ            = 2.0;         // Distancia maxima do preco ao ponto D (x ATR)
 
 input group "=== GESTAO DIARIA (percentual do saldo) ==="
-input double InpStopDiarioPct           = 0.20;         // Stop maximo diario (%)
-input double InpAlvoDiarioPct           = 0.40;         // Alvo maximo diario (%)
+input bool   InpGestaoEmDolares         = true;         // Gestao em DOLARES (true) ou percentual (false)
+input double InpStopDiarioUSD           = 25.0;         // Stop maximo diario (US$)
+input double InpAlvoDiarioUSD           = 50.0;         // Alvo maximo diario (US$)
+input double InpStopDiarioPct           = 0.20;         // Stop maximo diario (%) - usado se dolares=false
+input double InpAlvoDiarioPct           = 0.40;         // Alvo maximo diario (%) - usado se dolares=false
 input int    InpMaxEntradasDia          = 2;           // Maximo de entradas por dia (1 a 3)
 input int    InpMaxPosicoesAbertas      = 1;           // Maximo de posicoes abertas ao mesmo tempo
 input double InpRRMinimo                = 1.2;         // Razao risco/retorno minima aceita
@@ -368,14 +371,14 @@ void ChecarLimitesDiarios()
    double pct = ResultadoDiaPct();
    if(!gBloqueadoDia)
    {
-      if(pct <= -InpStopDiarioPct)
+      if(pct <= -StopDiarioEfetivoPct())
       {
          gBloqueadoDia = true;
          gMotivoBloqueio = "STOP DIARIO ATINGIDO (" + DoubleToString(pct, 2) + "%)";
          if(InpFecharTudoNaMeta) FecharTodasEA(false);
          Print("[GESTAO] ", gMotivoBloqueio);
       }
-      else if(pct >= InpAlvoDiarioPct)
+      else if(pct >= AlvoDiarioEfetivoPct())
       {
          gBloqueadoDia = true;
          gMotivoBloqueio = "META DIARIA BATIDA (+" + DoubleToString(pct, 2) + "%)";
@@ -502,14 +505,38 @@ int DigitosLote()
 }
 
 //======================= GESTAO POR OPERACAO ========================
+double SaldoBaseDia()
+{
+   return (gSaldoInicioDia > 0.0 ? gSaldoInicioDia : AccountInfoDouble(ACCOUNT_BALANCE));
+}
+
+// v4.6 - limites efetivos: converte US$ em % do saldo do dia quando InpGestaoEmDolares
+double StopDiarioEfetivoPct()
+{
+   if(InpGestaoEmDolares)
+      return InpStopDiarioUSD / MathMax(1.0, SaldoBaseDia()) * 100.0;
+   return InpStopDiarioPct;
+}
+
+double AlvoDiarioEfetivoPct()
+{
+   if(InpGestaoEmDolares)
+      return InpAlvoDiarioUSD / MathMax(1.0, SaldoBaseDia()) * 100.0;
+   return InpAlvoDiarioPct;
+}
+
 double RiscoPorEntradaPct()
 {
+   if(InpGestaoEmDolares)
+      return StopDiarioEfetivoPct() / MathMax(1, InpMaxEntradasDia);
    if(InpUsarRiscoFixo && InpRiscoPorEntradaPct > 0) return InpRiscoPorEntradaPct;
    return InpStopDiarioPct / MathMax(1, InpMaxEntradasDia);
 }
 
 double AlvoPorEntradaPct()
 {
+   if(InpGestaoEmDolares)
+      return AlvoDiarioEfetivoPct() / MathMax(1, InpMaxEntradasDia);
    if(InpUsarRiscoFixo && InpAlvoPorEntradaPct > 0) return InpAlvoPorEntradaPct;
    return InpAlvoDiarioPct / MathMax(1, InpMaxEntradasDia);
 }
@@ -1314,9 +1341,12 @@ void AtualizarPainel()
        gPad.valido ? (gPad.compra ? clrLime : clrTomato) : clrSilver);
    Lbl("t3", x, y - 56, "Saldo inicio do dia: " + DoubleToString(gSaldoInicioDia, 2), clrWhite);
    Lbl("t4", x, y - 74, "Resultado do dia: " + DoubleToString(res, 2) + "  (" + DoubleToString(pct, 2) + "%)", cRes);
-   Lbl("t5", x, y - 92, "Stop diario: -" + DoubleToString(InpStopDiarioPct, 2) + "%   |   Meta diaria: +" + DoubleToString(InpAlvoDiarioPct, 2) + "%", clrKhaki);
-   Lbl("t6", x, y - 110, "Risco/entrada: " + DoubleToString(RiscoPorEntradaPct(), 2) +
-       "%   |   Alvo/entrada: " + DoubleToString(AlvoPorEntradaPct(), 2) + "%", clrKhaki);
+   string txtStopDia = InpGestaoEmDolares ? "-US$ " + DoubleToString(InpStopDiarioUSD, 2) : "-" + DoubleToString(InpStopDiarioPct, 2) + "%";
+   string txtMetaDia = InpGestaoEmDolares ? "+US$ " + DoubleToString(InpAlvoDiarioUSD, 2) : "+" + DoubleToString(InpAlvoDiarioPct, 2) + "%";
+   Lbl("t5", x, y - 92, "Stop diario: " + txtStopDia + "   |   Meta diaria: " + txtMetaDia, clrKhaki);
+   string txtRisco = InpGestaoEmDolares ? "US$ " + DoubleToString(InpStopDiarioUSD / MathMax(1, InpMaxEntradasDia), 2) : DoubleToString(RiscoPorEntradaPct(), 2) + "%";
+   string txtAlvo  = InpGestaoEmDolares ? "US$ " + DoubleToString(InpAlvoDiarioUSD / MathMax(1, InpMaxEntradasDia), 2) : DoubleToString(AlvoPorEntradaPct(), 2) + "%";
+   Lbl("t6", x, y - 110, "Risco/entrada: " + txtRisco + "   |   Alvo/entrada: " + txtAlvo, clrKhaki);
    Lbl("t9", x, y - 128, "Pivos: " + (string)gQtdPivos + "  |  Figuras: " + (string)gQtdPadroes + "/" + (string)MathMax(1, InpMaxFiguras) +
        "   |   Auto: " + (InpEntradasAutomaticas ? "LIGADO" : "DESLIGADO") +
        "   |   BE: " + (InpMoverBreakeven ? "LIGADO" : "DESLIGADO"),
@@ -1582,8 +1612,8 @@ int OnInit()
    DesenharPadrao();
    AtualizarPainel();
    Print("Robo Fenix v4.00 - Precisao Cirurgica no Ponto D | AUTO ", (InpEntradasAutomaticas ? "LIGADO" : "DESLIGADO"),
-          " | Entrada no D ", (InpEntrarAoFecharFigura ? "LIGADA" : "DESLIGADA"), " | Stop diario ", InpStopDiarioPct,
-         "% | Meta diaria ", InpAlvoDiarioPct, "% | Entradas/dia ", InpMaxEntradasDia,
+          " | Entrada no D ", (InpEntrarAoFecharFigura ? "LIGADA" : "DESLIGADA"), " | Stop diario ", StopDiarioEfetivoPct(),
+         "% | Meta diaria ", AlvoDiarioEfetivoPct(), "% | Entradas/dia ", InpMaxEntradasDia,
          " | Breakeven ", (InpMoverBreakeven ? "ON" : "OFF"));
    return INIT_SUCCEEDED;
 }
