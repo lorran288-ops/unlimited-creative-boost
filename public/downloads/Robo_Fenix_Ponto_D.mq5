@@ -71,7 +71,7 @@
 //|  do pin bar, RSI e volume) e "InpTolerancia" nos harmonicos.      |
 //+------------------------------------------------------------------+
 #property copyright "Robo Gartley Harmonico"
-#property version   "4.80"
+#property version   "4.90"
 
 #include <Trade\Trade.mqh>
 
@@ -80,7 +80,7 @@ input group "=== PADROES HARMONICOS ==="
 input ENUM_TIMEFRAMES InpTFSinal        = PERIOD_H1;  // Timeframe do sinal (padrao)
 input int    InpFractalDepth            = 2;           // Profundidade do pivo (velas de cada lado)
 input int    InpBarrasBusca             = 1000;         // Barras analisadas para achar XABCD
-input double InpTolerancia              = 0.15;        // Tolerancia dos niveis Fibonacci (estrito 0.05)
+input double InpTolerancia              = 0.18;        // Tolerancia dos niveis Fibonacci (estrito 0.05)
 input int    InpMaxPivos                = 60;          // Quantidade de pivos analisados
 input bool   InpUsarFiltroCD            = false;        // Exigir projecao CD dentro da faixa Fibonacci
 input bool   InpAceitarGenerico         = true;       // Aceitar padrao harmonico generico (ABCD)
@@ -100,7 +100,7 @@ input double InpStopDiarioUSD           = 25.0;         // Stop maximo diario (U
 input double InpAlvoDiarioUSD           = 50.0;         // Alvo maximo diario (US$)
 input double InpStopDiarioPct           = 0.20;         // Stop maximo diario (%) - usado se dolares=false
 input double InpAlvoDiarioPct           = 0.40;         // Alvo maximo diario (%) - usado se dolares=false
-input int    InpMaxEntradasDia          = 3;           // Maximo de entradas por dia (1 a 3)
+input int    InpMaxEntradasDia          = 2;           // Maximo de entradas por dia (1 a 3)
 input int    InpMaxPosicoesAbertas      = 1;           // Maximo de posicoes abertas ao mesmo tempo
 input double InpRRMinimo                = 1.2;         // Razao risco/retorno minima aceita
 input bool   InpUsarRiscoFixo           = true;        // Usar risco/alvo fixos por operacao (abaixo)
@@ -114,7 +114,7 @@ input int    InpSlippage                = 30;          // Desvio maximo (pontos)
 input ulong  InpMagic                   = 20260902;    // Numero magico
 input bool   InpFecharTudoNaMeta        = true;        // Fechar posicoes ao bater meta/stop diario
 input bool   InpUsarSpreadMaximo        = true;        // Bloquear entrada com spread alto
-input int    InpSpreadMaximoPontos      = 50;          // Spread maximo permitido (pontos)
+input int    InpSpreadMaximoPontos      = 80;          // Spread maximo permitido (pontos)
 input bool   InpPularEntradaLoteMinimo  = true;        // Nao entrar se o lote de risco < lote minimo
 input bool   InpMoverBreakeven          = false;        // Mover stop para o breakeven
 input double InpGatilhoBE               = 1.0;         // Gatilho do BE (x risco inicial a favor)
@@ -154,19 +154,19 @@ input bool   InpPrioridadeHarmonico     = true;        // Harmonico tem priorida
 
 input group "=== FUSAO: HARMONICO CONFIRMADO POR FORCA/ROMPIMENTO ==="
 input bool   InpUsarFusao                = true;        // Exigir confirmacao de forca/rompimento no ponto D
-input double InpFusaoCorpoMin            = 0.50;        // Forca minima do corpo da vela de confirmacao (0-1)
+input double InpFusaoCorpoMin            = 0.40;        // Forca minima do corpo da vela de confirmacao (0-1)
 input int    InpFusaoLookback            = 3;           // Barras do micro-range para o rompimento de gatilho
-input bool   InpFusaoExigirRompimento    = true;        // Exigir rompimento do micro-range na direcao do padrao
+input bool   InpFusaoExigirRompimento    = false;        // Exigir rompimento do micro-range na direcao do padrao
 input bool   InpFusaoFiltroEMA           = false;       // Exigir preco a favor da EMA rapida
 input int    InpFusaoEmaPeriodo          = 50;          // Periodo da EMA rapida da fusao
 
 input group "=== GATILHO CIRURGICO NO PONTO D ==="
 // ---- AJUSTE DE SENSIBILIDADE POR ATIVO: comece por estes parametros ----
 input bool   InpGatilhoCirurgico          = true;        // Exigir gatilho cirurgico no ponto D
-input double InpMaxDistPRZ_ATR            = 2.00;        // Distancia MAXIMA do preco ao ponto D (x ATR) - menor = mais cirurgico
+input double InpMaxDistPRZ_ATR            = 2.50;        // Distancia MAXIMA do preco ao ponto D (x ATR) - menor = mais cirurgico
 input int    InpMinConfirmacoes           = 1;           // Confirmacoes minimas exigidas (1 a 3)
 input bool   InpUsarPinBar                = true;        // Confirmacao 1: rejeicao de preco (pin bar) na zona
-input double InpPinBarPavioMin            = 0.50;        // Pavio de rejeicao minimo (fracao do range da vela)
+input double InpPinBarPavioMin            = 0.40;        // Pavio de rejeicao minimo (fracao do range da vela)
 input double InpPinBarCorpoMax            = 0.45;        // Corpo maximo da vela de rejeicao (fracao do range)
 input bool   InpUsarRSIDiv                = true;        // Confirmacao 2: divergencia de RSI no tempo menor
 input ENUM_TIMEFRAMES InpTFGatilho        = PERIOD_M5;   // Tempo grafico menor do gatilho
@@ -174,19 +174,19 @@ input int    InpRSIPeriodo                = 14;          // Periodo do RSI
 input int    InpDivLookback               = 12;          // Barras analisadas na divergencia
 input bool   InpUsarExaustaoVolume        = true;        // Confirmacao 3: exaustao de volume/fluxo
 input int    InpVolMedia                  = 20;          // Barras da media de volume
-input double InpVolFator                  = 1.20;        // Volume da vela do D / media (climax)
+input double InpVolFator                  = 1.10;        // Volume da vela do D / media (climax)
 
 input group "=== v4.7 FILTRO DE ALTA ASSERTIVIDADE ==="
 input bool   InpFiltroQualidade           = true;        // Liga os filtros de qualidade abaixo
 input bool   InpUsarRSIExtremo            = true;        // Exigir RSI H1 esticado no D (exaustao real)
-input double InpRSICompraMax              = 45.0;        // Compra so com RSI do sinal abaixo de
-input double InpRSIVendaMin               = 55.0;        // Venda so com RSI do sinal acima de
+input double InpRSICompraMax              = 50.0;        // Compra so com RSI do sinal abaixo de
+input double InpRSIVendaMin               = 50.0;        // Venda so com RSI do sinal acima de
 input bool   InpUsarFiltroADX             = true;        // Bloquear reversao contra tendencia forte
 input int    InpADXPeriodo                = 14;          // Periodo do ADX
-input double InpADXMax                    = 38.0;        // ADX maximo (acima = tendencia forte, harmonico falha)
+input double InpADXMax                    = 45.0;        // ADX maximo (acima = tendencia forte, harmonico falha)
 input bool   InpUsarFiltroHorario         = true;        // Operar so no horario de liquidez
-input int    InpHoraInicio                = 6;           // Hora inicial (horario do servidor)
-input int    InpHoraFim                   = 22;          // Hora final (horario do servidor)
+input int    InpHoraInicio                = 2;           // Hora inicial (horario do servidor)
+input int    InpHoraFim                   = 23;          // Hora final (horario do servidor)
 input bool   InpBloquearSexta             = false;        // Nao abrir entradas na sexta apos 16h
 
 input group "=== ALVOS DINAMICOS (RR 1:2 + PARCIAIS FIBONACCI) ==="
@@ -578,7 +578,9 @@ double CalcularLote(double distanciaStop, double riscoPct)
    if(lote < minL)
    {
       // antes o EA entrava com o lote minimo mesmo com risco acima do plano
-      if(InpPularEntradaLoteMinimo)
+      // v4.9: aceita o lote minimo se a perda dele couber no stop DIARIO
+      double limiteDia = InpGestaoEmDolares ? InpStopDiarioUSD : gSaldoInicioDia*InpStopDiarioPct/100.0;
+      if(InpPularEntradaLoteMinimo && perdaPorLote*minL > limiteDia)
       {
          PrintFormat("[RISCO] Lote calculado %.4f abaixo do minimo %.2f - entrada pulada para nao estourar o risco",
                      lote, minL);
