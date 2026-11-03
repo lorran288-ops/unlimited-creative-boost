@@ -1,0 +1,54 @@
+//@version=6
+indicator("Fenix - Sinais manuais IQ Option M2/M5 v1.0", overlay=true)
+// Nao conecta a IQ Option e nao envia ordens. Feed TradingView pode divergir,
+// especialmente em ativos OTC. Confirmar preco/expiracao manualmente.
+emaFastPeriod = input.int(20, "EMA do pullback", minval=2)
+emaTrendPeriod = input.int(100, "EMA de tendencia", minval=3)
+rsiPeriod = input.int(14, "RSI", minval=2)
+atrPeriod = input.int(14, "ATR", minval=2)
+bodyMin = input.float(0.50, "Corpo minimo / amplitude", minval=0.1, maxval=1.0, step=0.05)
+atrMinPct = input.float(0.02, "ATR minimo em % do preco", minval=0.001, step=0.005)
+expirationBars = input.int(1, "Expiracao em velas", minval=1, maxval=3)
+cooldownBars = input.int(2, "Intervalo minimo entre sinais", minval=1)
+useVolume = input.bool(false, "Exigir volume relativo (somente feed com volume)")
+volumeMultiplier = input.float(1.0, "Multiplicador de volume", minval=0.1, step=0.1)
+
+allowed = timeframe.isminutes and (timeframe.multiplier == 2 or timeframe.multiplier == 5)
+fast = ta.ema(close, emaFastPeriod)
+trend = ta.ema(close, emaTrendPeriod)
+rsi = ta.rsi(close, rsiPeriod)
+atr = ta.atr(atrPeriod)
+avgVolume = ta.sma(volume, 20)[1]
+liquid = not na(atr) and close > 0 and atr / close * 100 >= atrMinPct
+volumeOK = not useVolume or (not na(volume) and not na(avgVolume) and avgVolume > 0 and volume >= avgVolume * volumeMultiplier)
+strong = high > low and math.abs(close - open) / (high - low) >= bodyMin
+// Pullback na vela anterior; recuperacao com rompimento do extremo anterior.
+// Sem pivôs futuros, lookahead ou sinais antes do fechamento.
+buySetup = close > trend and fast > trend and trend > trend[1] and low[1] <= fast[1] and close[1] > trend[1] and close > high[1] and close > open and rsi >= 50 and rsi <= 68
+sellSetup = close < trend and fast < trend and trend < trend[1] and high[1] >= fast[1] and close[1] < trend[1] and close < low[1] and close < open and rsi >= 32 and rsi <= 50
+var int lastSignal = na
+canSignal = na(lastSignal) or bar_index - lastSignal >= cooldownBars
+callSignal = allowed and barstate.isconfirmed and liquid and volumeOK and strong and canSignal and buySetup
+putSignal = allowed and barstate.isconfirmed and liquid and volumeOK and strong and canSignal and sellSetup
+if callSignal or putSignal
+    lastSignal := bar_index
+    direction = callSignal ? "CALL" : "PUT"
+    expirationMinutes = timeframe.multiplier * expirationBars
+    expirationTime = time_close + expirationMinutes * 60000
+    message = syminfo.tickerid + " | " + direction + " | Preco de referencia: " + str.tostring(close, format.mintick) + " | Duracao: " + str.tostring(expirationMinutes) + " min | Expiracao indicativa UTC: " + str.format_time(expirationTime, "yyyy-MM-dd HH:mm:ss", "UTC") + " | Manual: conferir cotacao e vencimento na IQ Option"
+    alert(message, alert.freq_once_per_bar_close)
+
+// Aviso ao entrar em baixa volatilidade, sem spam em todas as velas.
+noVol = allowed and barstate.isconfirmed and not liquid and not na(atr)
+if noVol and not noVol[1]
+    alert(syminfo.tickerid + " | NAO OPERAR: volatilidade insuficiente", alert.freq_once_per_bar_close)
+
+plot(fast, "EMA pullback", color=color.teal)
+plot(trend, "EMA tendencia", color=color.orange, linewidth=2)
+plotshape(callSignal, title="CALL confirmado", text="CALL", style=shape.triangleup, location=location.belowbar, color=color.lime, textcolor=color.black, size=size.small)
+plotshape(putSignal, title="PUT confirmado", text="PUT", style=shape.triangledown, location=location.abovebar, color=color.red, textcolor=color.white, size=size.small)
+bgcolor(allowed and not liquid ? color.new(color.gray, 90) : na, title="Sem volatilidade")
+var table status = table.new(position.top_right, 1, 2)
+if barstate.islast
+    table.cell(status, 0, 0, allowed ? "M" + str.tostring(timeframe.multiplier) + " | Manual" : "NAO OPERAR: selecionar M2 ou M5", text_color=color.white, bgcolor=allowed ? color.teal : color.red)
+    table.cell(status, 0, 1, not liquid ? "NAO OPERAR: baixa volatilidade" : not volumeOK ? "NAO OPERAR: volume insuficiente" : "Aguardando confluencia confirmada", text_color=color.white, bgcolor=color.gray)
