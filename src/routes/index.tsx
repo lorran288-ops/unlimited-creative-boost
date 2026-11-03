@@ -9,6 +9,12 @@ export const Route = createFileRoute("/")({
     title: "Robô Fênix Express Ponto D",
     meta: [
       {
+        name: "description",
+        content: "Conheça o Robô Fênix Express Ponto D e baixe o arquivo para MetaTrader 5.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      {
         property: "og:title",
         content: "Robô Fênix Express Ponto D",
       },
