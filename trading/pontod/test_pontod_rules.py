@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
-SOURCE = Path(__file__).with_name('Robo_Fenix_PontoD_Trendline_v5.3.mq5')
+SOURCE = Path(__file__).with_name('Robo_Fenix_PontoD_Trendline_v5.4.mq5')
 
 
 class PontoDRules(unittest.TestCase):
@@ -13,7 +13,7 @@ class PontoDRules(unittest.TestCase):
     def setUpClass(cls):
         source = SOURCE.read_text()
         block = source.split('// BEGIN_TESTABLE_RULES\n')[1].split('// END_TESTABLE_RULES')[0]
-        names = ['InpRiscoPorEntradaUSD', 'InpAlvoPorEntradaUSD', 'InpMaxEntradasDia']
+        names = ['InpRiscoPorEntradaUSD', 'InpAlvoPorEntradaUSD', 'InpMaxEntradasDia', 'InpRiscoMinFracao', 'InpValidadeSinalSeg']
         defaults = '\n'.join(re.search(r'^input (?:double|int)\s+' + name + r'\s*=\s*[^;]+;', source, re.M).group().replace('input ', 'const ') for name in names)
         cls.block = '#include <algorithm>\n#include <cmath>\n#include <cassert>\n#define MathMax std::max\n#define MathMin std::min\n#define MathFloor std::floor\n' + defaults + '\n' + block
         cls.temp = tempfile.TemporaryDirectory(prefix='pontod-tests-')
@@ -45,6 +45,19 @@ class PontoDRules(unittest.TestCase):
 
     def test_retry_window_prevents_late_signal(self):
         self.check('assert(JanelaRegra(1003,1000,120)); assert(JanelaRegra(1120,1000,120)); assert(!JanelaRegra(1121,1000,120)); assert(!JanelaRegra(999,1000,120)); assert(!JanelaRegra(1000,0,120));')
+
+    def test_small_loss_reduces_risk_instead_of_blocking_day(self):
+        # perda de US$20 no dia: ainda entra arriscando US$480 (antes travava o dia)
+        self.check('assert(InpRiscoMinFracao==0.50); double livre=OrcamentoRegra(-20.0,500.0,0.0); assert(std::abs(RiscoAjustadoRegra(500.0,livre,InpRiscoMinFracao)-480.0)<1e-9);')
+
+    def test_full_risk_when_budget_available(self):
+        self.check('assert(RiscoAjustadoRegra(500.0,500.0,InpRiscoMinFracao)==500.0); assert(RiscoAjustadoRegra(500.0,1500.0,InpRiscoMinFracao)==500.0);')
+
+    def test_below_half_budget_blocks(self):
+        self.check('assert(RiscoAjustadoRegra(500.0,249.0,InpRiscoMinFracao)==0.0); assert(RiscoAjustadoRegra(500.0,0.0,InpRiscoMinFracao)==0.0); assert(RiscoAjustadoRegra(500.0,400.0,0.0)==0.0);')
+
+    def test_signal_window_five_minutes(self):
+        self.check('assert(InpValidadeSinalSeg==300); assert(JanelaRegra(1300,1000,InpValidadeSinalSeg)); assert(!JanelaRegra(1301,1000,InpValidadeSinalSeg));')
 
 
 if __name__ == '__main__':
