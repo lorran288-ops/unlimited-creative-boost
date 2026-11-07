@@ -1,4 +1,5 @@
 # Trading reestruturação
+- [x] Diagnose PontoD Trendline v5.2 absent entries, preserve strategies and controls, deliver v5.3 with USD500 risk/USD1000 target per trade and regression tests; actual blocked signal requires Experts logs, MT5 compilation/backtest remain external.
 - [x] Diagnose the six uploaded sources, distinguishing code faults from unverified loss causes.
 - [x] Deliver an MQL5 confluence EA with shared persistent USD daily locks and technical/trailing stops.
 - [x] Deliver M2/M5 manual signal companion and installation instructions.
