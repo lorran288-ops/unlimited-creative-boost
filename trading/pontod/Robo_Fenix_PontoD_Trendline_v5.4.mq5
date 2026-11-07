@@ -125,7 +125,7 @@ input bool   InpUsarRiscoFixo           = true;        // Usar risco/alvo fixos 
 input double InpRiscoPorEntradaPct      = 0.10;        // Stop por operacao (% do saldo)
 input double InpAlvoPorEntradaPct       = 0.20;        // Take profit por operacao (% do saldo)
 
-input group "=== VALORES POR OPERACAO v5.3 ==="
+input group "=== VALORES POR OPERACAO v5.4 ==="
 input double InpRiscoPorEntradaUSD = 500.0;    // Perda bruta prevista no SL (custos/gaps podem ultrapassar)
 input double InpAlvoPorEntradaUSD  = 1000.0;   // Lucro bruto planejado no TP
 input int    InpRepetirSegundos    = 3;        // Intervalo das tentativas enquanto o sinal e recente
