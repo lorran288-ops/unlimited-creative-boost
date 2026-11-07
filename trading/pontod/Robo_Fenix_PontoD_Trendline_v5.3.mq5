@@ -115,7 +115,7 @@ input double InpAlvoDiarioUSD           = 1000.0;         // Alvo maximo diario 
 input double InpStopDiarioPct           = 0.20;         // Stop maximo diario (%) - usado se dolares=false
 input double InpAlvoDiarioPct           = 0.40;         // Alvo maximo diario (%) - usado se dolares=false
 input int    InpMaxEntradasDia          = 10;          // Maximo de entradas por dia
-input int    InpDivisorRisco            = 1;           // Legado: divisor usado somente no modo percentual sem risco fixo
+input int    InpDivisorRisco            = 2;           // Legado: divisor usado somente no modo percentual sem risco fixo
 input int    InpMaxPosicoesAbertas      = 1;           // Maximo de posicoes abertas ao mesmo tempo
 input double InpRRMinimo                = 1.2;         // Razao risco/retorno minima aceita
 input bool   InpUsarRiscoFixo           = true;        // Usar risco/alvo fixos por operacao (abaixo)
@@ -1135,6 +1135,12 @@ void AjustarStops(const bool compra, const double preco, double &sl, double &tp)
 double RiscoReservado()
 {
    double soma=0;
+   // Ordem ainda em processamento: nao libera seu orcamento para outro grafico.
+   for(int i=OrdersTotal()-1;i>=0;i--)
+   {
+      ulong ordem=OrderGetTicket(i);
+      if(ordem>0 && OrderGetInteger(ORDER_MAGIC)==(long)InpMagic) return 1e100;
+   }
    for(int i=PositionsTotal()-1;i>=0;i--)
    {
       ulong tk=PositionGetTicket(i);
@@ -1185,7 +1191,11 @@ bool EnviarOrdem(bool compra,double sl,string comentario)
    double dono=agora+60;
    if(!GlobalVariableSetOnCondition(chave,dono,anterior)) return false;
    bool ok=ExecutarOrdemProtegida(compra,sl,comentario);
-   GlobalVariableSetOnCondition(chave,0.0,dono);
+   // Se o servidor aceitou sem confirmar negocio, segura o lock para reconciliar.
+   // Falha fechada: prefere aguardar a duplicar exposicao.
+   if(ok && trade.ResultDeal()==0)
+      GlobalVariableSetOnCondition(chave,agora+120.0,dono);
+   else GlobalVariableSetOnCondition(chave,0.0,dono);
    return ok;
 }
 
@@ -1658,11 +1668,13 @@ void AtualizarPainel()
    color  cRes = (pct > 0 ? clrLime : (pct < 0 ? clrTomato : clrSilver));
 
    int x = 12, y = 24;
+   long altura=ChartGetInteger(0,CHART_HEIGHT_IN_PIXELS,0);
+   bool compacto=altura<440;
 
    Lbl("t0", x, y,      "FENIX v5.3 - PONTO D + TRENDLINE", clrGold, 11);
    Lbl("t1", x, y + 20, "Sinal: " + EnumToString(InpTFSinal) + "  |  Grafico: " + EnumToString((ENUM_TIMEFRAMES)Period()) +
        "  |  Spread: " + (string)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) + " pts", clrSkyBlue);
-   Lbl("t2", x, y + 38, "Estrategia unica FUSAO " + (InpEntradasAutomaticas ? "ON" : "OFF") + "  |  Gatilho " + (InpUsarFusao ? "ROMPIMENTO+FORCA" : "SO PADRAO") + "  |  Padrao: " + (gPad.valido ? gPad.nome + (gPad.compra ? " (COMPRA)" : " (VENDA)") : "procurando..."),
+   Lbl("t2", x, y + 38, "Figura: " + (gPad.valido ? gPad.nome + (gPad.compra ? " COMPRA" : " VENDA") : "buscando..."),
        gPad.valido ? (gPad.compra ? clrLime : clrTomato) : clrSilver);
    Lbl("t3", x, y + 56, "Saldo inicio do dia: " + DoubleToString(gSaldoInicioDia, 2), clrWhite);
    Lbl("t4", x, y + 74, "Resultado do dia: " + DoubleToString(res, 2) + "  (" + DoubleToString(pct, 2) + "%)", cRes);
@@ -1696,6 +1708,23 @@ void AtualizarPainel()
       Btn("bSell",  x, y + 274, 180, 30, "VENDA MANUAL",   clrFireBrick,    clrWhite);
       Btn("bCloseS",x, y + 308, 180, 30, "FECHAR SIMBOLO", C'40,40,40',     clrWhite);
       Btn("bCloseA",x, y + 342, 180, 30, "FECHAR TUDO",    C'90,90,90',     clrWhite);
+   }
+   if(compacto)
+   {
+      // Quatro graficos lado a lado: linhas curtas e botoes em duas colunas.
+      string nomes[12]={"t0","t1","t2","t3","t4","t5","t6","t9","t7","t8","t10","t11"};
+      for(int i=0;i<12;i++)
+      {
+         ObjectSetInteger(0,PFX+nomes[i],OBJPROP_YDISTANCE,16+i*14);
+         ObjectSetInteger(0,PFX+nomes[i],OBJPROP_FONTSIZE,8);
+      }
+      if(InpMostrarBotoes)
+      {
+         Btn("bBuy",x,188,140,23,"COMPRA MANUAL",clrGreen,clrWhite);
+         Btn("bSell",x+146,188,140,23,"VENDA MANUAL",clrFireBrick,clrWhite);
+         Btn("bCloseS",x,215,140,23,"FECHAR SIMBOLO",C'40,40,40',clrWhite);
+         Btn("bCloseA",x+146,215,140,23,"FECHAR TUDO",C'90,90,90',clrWhite);
+      }
    }
    ChartRedraw();
 }
